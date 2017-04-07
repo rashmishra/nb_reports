@@ -287,7 +287,7 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
   ON
     T.orderid = oh.orderid
   LEFT OUTER JOIN
-    bi.sales_rep_mapping1 AS m
+    BI_Automation.sales_rep_mapping AS m
   ON
     m.sales_rep = e.deal_owner
   LEFT OUTER JOIN (
