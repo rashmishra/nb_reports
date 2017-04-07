@@ -55,7 +55,7 @@ LEFT OUTER JOIN (
 ON
   ol.dealid = e.deal_id
   
-  left join bi.sales_rep_mapping1 s on s.sales_rep = e.dealOwner
+  left join BI_Automation.sales_rep_mapping s on s.sales_rep = e.dealOwner
 WHERE
   ol.redemptiondate IS NOT NULL
   and oh.ispaid = 't'
