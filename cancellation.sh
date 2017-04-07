@@ -85,7 +85,7 @@ LEFT JOIN  (SELECT t.orderid AS txn_orderid
                AND ol.orderid = e.txn_orderid
 
 LEFT OUTER JOIN
-    bi.sales_rep_mapping1 AS m
+    BI_Automation.sales_rep_mapping AS m
   ON
     m.sales_rep = ol.dealOwner
 GROUP BY cancellation_year, cancellation_month, cancellation_day, cancelled_orderline_id, cancelled_order_id, deal_id, deal_title
