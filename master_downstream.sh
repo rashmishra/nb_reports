@@ -9,7 +9,7 @@ date
 
 
 # Downstream table loading. Replace existing
-v_query_downstream="select  --7173184 5545298
+v_query_downstream="select
 a.order_Id AS order_id
 ,a.orderline_id as orderline_id,
 a.orderline_status as orderline_status
@@ -191,8 +191,18 @@ a.orderline_status as orderline_status
  ap.af_re_targeting_conversion_type as af_is_reengagement  
  FROM 
  nb_reports.master_transaction  a
- LEFT JOIN (
-  SELECT
+ LEFT JOIN (select
+rank1,
+orderid_ga,
+dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga
+from
+(
+select 
+dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga,orderid_ga,
+rank() over (partition by orderid_ga  order by  dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga) as rank1
+from
+(
+SELECT
     dcg AS dcg_ga
     ,campaign_grouping 
     ,campaign AS campaign_ga
@@ -203,7 +213,12 @@ a.orderline_status as orderline_status
     ,dealid AS dealid_ga
     ,INTEGER (orderid) AS orderid_ga
   FROM nb_reports.ga_source_medium
+  where orderid is not null 
   group by dcg_ga, campaign_grouping , campaign_ga , source_ga, medium_ga, keyword_ga, content_ga, dealid_ga,  orderid_ga
+  )
+  where orderid_ga is not null
+  )
+ where rank1 = 1
   ) AS y ON a.order_Id = y.orderid_ga
   LEFT JOIN  
  (select * from nb_reports.downstream_appsflyer  where rank = 1) as ap on a.order_Id = ap.af_order_id 
@@ -243,7 +258,18 @@ a.orderline_status as orderline_status
  FROM 
  nb_reports.master_transaction  a
  LEFT JOIN (
-  SELECT
+  select
+rank1,
+orderid_ga,
+dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga
+from
+(
+select 
+dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga,orderid_ga,
+rank() over (partition by orderid_ga  order by  dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga) as rank1
+from
+(
+SELECT
     dcg AS dcg_ga
     ,campaign_grouping 
     ,campaign AS campaign_ga
@@ -254,7 +280,12 @@ a.orderline_status as orderline_status
     ,dealid AS dealid_ga
     ,INTEGER (orderid) AS orderid_ga
   FROM nb_reports.ga_source_medium
+  where orderid is not null 
   group by dcg_ga, campaign_grouping , campaign_ga , source_ga, medium_ga, keyword_ga, content_ga, dealid_ga,  orderid_ga
+  )
+  where orderid_ga is not null
+  )
+ where rank1 = 1
   ) AS y ON a.order_Id = y.orderid_ga
   LEFT JOIN  
  (select * from nb_reports.downstream_appsflyer where rank = 1) as ap on a.order_Id = ap.af_order_id 
@@ -262,10 +293,6 @@ where a.first_transaction = 'TRUE'
 Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23--, 24--, 25,26
  
  ) b on a.customer_id = b.customer_id
--- Group by 1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,56,57
- 
- --limit 100
-
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
 
@@ -278,7 +305,7 @@ v_downstream_pids+=" $v_first_pid"
 wait $v_first_pid;
 
 # reengagement loading. Replace existing
-v_query_reengagement="select  --7173184 5545298
+v_query_reengagement="select
 a.order_Id AS order_id
 ,a.orderline_id as orderline_id,
 a.orderline_status as orderline_status
@@ -461,7 +488,18 @@ a.orderline_status as orderline_status
  FROM 
  nb_reports.master_transaction  a
  LEFT JOIN (
-  SELECT
+  select
+rank1,
+orderid_ga,
+dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga
+from
+(
+select 
+dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga,orderid_ga,
+rank() over (partition by orderid_ga  order by  dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga) as rank1
+from
+(
+SELECT
     dcg AS dcg_ga
     ,campaign_grouping 
     ,campaign AS campaign_ga
@@ -472,7 +510,12 @@ a.orderline_status as orderline_status
     ,dealid AS dealid_ga
     ,INTEGER (orderid) AS orderid_ga
   FROM nb_reports.ga_source_medium
+  where orderid is not null 
   group by dcg_ga, campaign_grouping , campaign_ga , source_ga, medium_ga, keyword_ga, content_ga, dealid_ga,  orderid_ga
+  )
+  where orderid_ga is not null
+  )
+ where rank1 = 1
   ) AS y ON a.order_Id = y.orderid_ga
   LEFT JOIN  
  (select * from nb_reports.reengagement_appsflyer where rank = 1) as ap on a.order_Id = ap.af_order_id 
@@ -512,7 +555,18 @@ a.orderline_status as orderline_status
  FROM 
  nb_reports.master_transaction  a
  LEFT JOIN (
-  SELECT
+  select
+rank1,
+orderid_ga,
+dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga
+from
+(
+select 
+dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga,orderid_ga,
+rank() over (partition by orderid_ga  order by  dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga) as rank1
+from
+(
+SELECT
     dcg AS dcg_ga
     ,campaign_grouping 
     ,campaign AS campaign_ga
@@ -523,7 +577,12 @@ a.orderline_status as orderline_status
     ,dealid AS dealid_ga
     ,INTEGER (orderid) AS orderid_ga
   FROM nb_reports.ga_source_medium
+  where orderid is not null 
   group by dcg_ga, campaign_grouping , campaign_ga , source_ga, medium_ga, keyword_ga, content_ga, dealid_ga,  orderid_ga
+  )
+  where orderid_ga is not null
+  )
+ where rank1 = 1
   ) AS y ON a.order_Id = y.orderid_ga
   LEFT JOIN  
  (select * from nb_reports.reengagement_appsflyer where rank = 1) as ap on a.order_Id = ap.af_order_id 
@@ -531,7 +590,6 @@ where a.first_transaction = 'TRUE'
 Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23--, 24--, 25,26
  
  ) b on a.customer_id = b.customer_id
-
 "
 
 tableName=reengagement
