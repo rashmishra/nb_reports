@@ -104,7 +104,7 @@ v_query_master_transactions="SELECT
     ol.merchantname AS merchant_name,
     ol.offerid AS offer_id,
     ol.offertitle AS offer_title,
-    ol.status AS orderline_status,
+    case when ol.status = 14 then 'Active' when ol.status = 15 then 'Redeemed' when ol.status = 16 then 'Refund' when ol.status = 17 then 'Cancelled' end AS orderline_status,
     ol.unitprice AS unit_price,
     ol.vertical AS vertical,
     ol.vouchercode AS voucher_code,
@@ -402,7 +402,7 @@ LEFT join
     ) y  on x.promocode = y.promocode_id and x.source2 = y.source
     
     Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,52,53,54,55,56,57,58,59
-          
+  limit 100       
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
 
