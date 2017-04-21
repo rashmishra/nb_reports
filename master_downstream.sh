@@ -556,17 +556,17 @@ SELECT
  FROM 
  nb_reports.master_transaction  a
  LEFT JOIN (
-  select
-rank1,
-orderid_ga,
-dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga
-from
-(
-select 
-dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga,orderid_ga,
-rank() over (partition by orderid_ga  order by  dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga) as rank1
-from
-(
+--   select
+-- rank1,
+-- orderid_ga,
+-- dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga
+-- from
+-- (
+-- select 
+-- dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga,orderid_ga,
+-- rank() over (partition by orderid_ga  order by  dcg_ga,campaign_grouping,campaign_ga,source_ga,medium_ga,keyword_ga,content_ga,dealid_ga) as rank1
+-- from
+-- (
 SELECT
     dcg AS dcg_ga
     ,campaign_grouping 
@@ -580,10 +580,10 @@ SELECT
   FROM nb_reports.ga_source_medium
   where orderid is not null 
   group by dcg_ga, campaign_grouping , campaign_ga , source_ga, medium_ga, keyword_ga, content_ga, dealid_ga,  orderid_ga
-  )
-  where orderid_ga is not null
-  )
- where rank1 = 1
+--   )
+--   where orderid_ga is not null
+--   )
+--  where rank1 = 1
   ) AS y ON a.order_Id = y.orderid_ga
   LEFT JOIN  
  (select * from nb_reports.reengagement_appsflyer where rank = 1) as ap on a.order_Id = ap.af_order_id 
