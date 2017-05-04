@@ -9,14 +9,24 @@ date
 
 
 # Master_Transaction table loading. Replace existing
-v_query_master_transactions="SELECT 
+v_query_master_transactions="
+SELECT 
  orderid as order_id,
   datestamp as date_time_ist,
   credits_requested,
   customer_id,
   customer_name,
   x.source as platform_type,
+  --x.promocode as promocode,
   case when x.promocode='' then 'null' else x.promocode end promocode,
+  CASE WHEN y.promocode_type = 'PERCENTAGE_CB' OR y.promocode_type = 'FLAT_CB' THEN 'Universal Cashback'
+WHEN y.promocode_type = 'cerebro' THEN 'UCB'
+WHEN y.promocode_type = 'PERCENTAGE'  OR y.promocode_type = 'FLAT' THEN 'Promo'
+WHEN length(x.promocode) < 9 and length(x.promocode) > 3
+THEN 'Referral'
+ELSE
+'Non-Promo'
+END AS Promo_flag,
   order_status,
   device_id,
   orderline_id,
@@ -70,6 +80,7 @@ v_query_master_transactions="SELECT
   y.has_user_transacted as promo_has_user_transacted,
   --redemption_city,
   first_cashback_date,
+  merchantcode as merchant_code,
   --y.source as source, 
   --source2,
     SUM(Number_of_Vouchers) AS number_of_vouchers,
@@ -93,7 +104,7 @@ v_query_master_transactions="SELECT
     oh.referralprogramid as referralprogramid,
         case when (oh.source = 'web' or oh.source = 'mobile' or oh.source = 'WEB') then 'WEB'
     when (oh.source = 'app_ios' or oh.source = 'app_android') then 'APP' end source2,
-    left(oh.promocode,12) AS promocode,
+    left(oh.promocode,12) as promocode,
     oh.Status AS order_Status,
     oh.deviceid AS device_id,
     ol.orderlineid AS orderline_id,
@@ -152,7 +163,8 @@ v_query_master_transactions="SELECT
             ELSE ol.marginPercentage END))*(SUM(ol.unitprice)) END)
     END AS GR,
     --mc.redemption_city as redemption_city,
-    cash.first_cashback_date as first_cashback_date
+    cash.first_cashback_date as first_cashback_date,
+    ol.merchantcode as merchantcode
   FROM (
     SELECT
       orderid,
@@ -206,6 +218,7 @@ v_query_master_transactions="SELECT
       categoryid,
       flatcommission/100.0 AS flatcommission,
       cashbackamount/100.0 AS cashbackamount,
+      merchantcode
 --       CASE
 --         WHEN redemptiondate IS NOT NULL OR status = 15 THEN EXACT_COUNT_DISTINCT(orderlineid)
 --       END voucher_redeemed,
@@ -379,7 +392,8 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
     redemption_city,
     redemption_state,
     first_transaction,
-    referralprogramid
+    referralprogramid,
+    merchantcode
     ) x
     
 LEFT join
@@ -401,8 +415,8 @@ LEFT join
     
     ) y  on x.promocode = y.promocode_id and x.source2 = y.source
     
-    Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,52,53,54,55,56,57,58,59
-         
+    Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,52,53,54,55,56,57,58,59,60,61
+          
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
 
