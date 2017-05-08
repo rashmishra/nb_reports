@@ -9,8 +9,7 @@ date
 
 
 # Master_Transaction table loading. Replace existing
-v_query_master_transactions="
-SELECT 
+v_query_master_transactions="SELECT 
  orderid as order_id,
   datestamp as date_time_ist,
   credits_requested,
@@ -19,8 +18,8 @@ SELECT
   x.source as platform_type,
   --x.promocode as promocode,
   case when x.promocode='' then 'null' else x.promocode end promocode,
-  CASE WHEN y.promocode_type = 'PERCENTAGE_CB' OR y.promocode_type = 'FLAT_CB' THEN 'Universal Cashback'
-WHEN y.promocode_type = 'cerebro' THEN 'UCB'
+  CASE WHEN (y.promocode_type = 'PERCENTAGE_CB' OR y.promocode_type = 'FLAT_CB') and promo_description = 'cerebro' THEN 'UCB'
+WHEN y.promocode_type = 'PERCENTAGE_CB' OR y.promocode_type = 'FLAT_CB' THEN 'Universal Cashback'
 WHEN y.promocode_type = 'PERCENTAGE'  OR y.promocode_type = 'FLAT' THEN 'Promo'
 WHEN length(x.promocode) < 9 and length(x.promocode) > 3
 THEN 'Referral'
