@@ -101,8 +101,8 @@ END AS Promo_flag,
     oh.customername AS customer_name,
     oh.Source AS Source,
     oh.referralprogramid as referralprogramid,
-        case when (oh.source = 'web' or oh.source = 'mobile' or oh.source = 'WEB') then 'WEB'
-    when (oh.source = 'app_ios' or oh.source = 'app_android') then 'APP' end source2,
+        case when oh.source in('web','mobile','WEB','mobile-web') then 'WEB'
+    when oh.source in ('app_ios','app_android') then 'APP' end source2,
     left(oh.promocode,12) as promocode,
     oh.Status AS order_Status,
     oh.deviceid AS device_id,
