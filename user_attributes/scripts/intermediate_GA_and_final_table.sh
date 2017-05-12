@@ -1,6 +1,12 @@
 #!/bin/bash
 
 
+v_task_start_time=`date`;
+
+echo "Task Started at ${v_task_start_time}";
+
+
+
 
 p_exit_upon_error(){
 
