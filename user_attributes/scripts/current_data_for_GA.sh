@@ -594,4 +594,8 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ###--------------######--------------######--------------######--------------######--------------###
 
 
- exit 0
+v_task_end_time=`date`;
+
+echo "Script started at ${v_task_start_time} and ended at ${v_task_end_time}" 
+
+exit 0

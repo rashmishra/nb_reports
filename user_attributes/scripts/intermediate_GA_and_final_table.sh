@@ -1129,4 +1129,10 @@ v_subtask="Final Table  'user_attributes_final' ";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
 
+v_task_end_time=`date`;
+
+
+echo "Task started at ${v_task_start_time} and ended at ${v_task_end_time}.";
+
+exit 0;
 
