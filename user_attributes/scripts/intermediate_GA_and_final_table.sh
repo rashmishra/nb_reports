@@ -1,6 +1,12 @@
 #!/bin/bash
 
 
+v_task_start_time=`date`;
+
+echo "Task Started at ${v_task_start_time}";
+
+
+
 
 p_exit_upon_error(){
 
@@ -57,7 +63,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_deal_pricepoint";
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -118,7 +124,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_ga_platform_daytime_affinit
 echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -159,7 +165,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_ga_browser_sessions";
 echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -209,7 +215,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_ga_latest_mob_info";
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -319,7 +325,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_recent_search";
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -367,7 +373,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_frequency_search";
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -416,7 +422,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_top_deals_browsed";
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -518,7 +524,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_user_categorywise_pricepoin
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -581,7 +587,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_user_most_browsed_catg_pric
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -666,7 +672,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_acquisition_source_base";
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -712,7 +718,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_acquisition_source";
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -852,7 +858,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_ga_combined";
 echo -e "bq query --maximum_billing_tier 100000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
@@ -1110,7 +1116,7 @@ v_destination_tbl="${v_dataset_name}.user_attributes_final";
 echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
 
 
-bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
