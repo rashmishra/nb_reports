@@ -54,13 +54,13 @@ v_dataset_name="engg_reporting";
 ## Table 1: dim_ga_customer_last_session
 ## Pulls effective date range of GA Sessions for each user
 
-v_query="SELECT Customer_ID, CAST(DATE(first_session_date) AS DATE) first_session_date
-       , CAST(DATE(MAX( session_date)) AS DATE) AS latest_session_date
+v_query="SELECT Customer_ID, MIN(CAST(DATE(first_session_date) AS DATE)) first_session_date
+       , MAX(CAST(DATE(MAX( session_date)) AS DATE)) AS latest_session_date
        , MAX( session_date) AS latest_session_date_int
        , CAST(DATE(DATE_ADD(DATE(MAX( session_date)), -91, 'DAY')) AS DATE) as effective_since_session_date
        , STRING(CAST(DATE(DATE_ADD(DATE(MAX( session_date)), -91, 'DAY')) AS DATE)) as effective_since_session_date_int
 FROM [ga_simplified.ga_session_history] 
-GROUP BY 1, 2";
+GROUP BY 1";
 
 v_destination_tbl="${v_dataset_name}.dim_ga_customer_last_session";
 
