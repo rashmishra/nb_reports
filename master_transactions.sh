@@ -16,7 +16,6 @@ v_query_master_transactions="SELECT
   customer_id,
   customer_name,
   x.source as platform_type,
-  --x.promocode as promocode,
   case when x.promocode='' then 'null' else x.promocode end promocode,
   CASE WHEN (y.promocode_type = 'PERCENTAGE_CB' OR y.promocode_type = 'FLAT_CB') and promo_description = 'cerebro' THEN 'UCB'
 WHEN y.promocode_type = 'PERCENTAGE_CB' OR y.promocode_type = 'FLAT_CB' THEN 'Universal Cashback'
@@ -77,11 +76,8 @@ END AS Promo_flag,
   y.promo_is_cashback as promo_is_cashback,
   y.is_deferential as promo_is_deferential,
   y.has_user_transacted as promo_has_user_transacted,
-  --redemption_city,
   first_cashback_date,
   merchantcode as merchant_code,
-  --y.source as source, 
-  --source2,
     SUM(Number_of_Vouchers) AS number_of_vouchers,
   Round(SUM(GR),2) AS GR,
   Round(SUM(activation_cost),2) AS customer_aquisition_cost,
@@ -89,7 +85,6 @@ END AS Promo_flag,
   INTEGER(SUM(TransactionValue)) AS GB,
   Round(SUM(price_After_Promo),2) AS price_after_promo,
   Round(SUM(x.cashback_amount),2) AS cashback_amount,
-  --SUM(voucher_redeemed) AS voucher_redeemed,
   
   FROM
  (
@@ -123,7 +118,6 @@ END AS Promo_flag,
     ol.paymenttermid AS paymentterm_id,
     ol.flatcommission AS flat_commission,
     ol.cashbackamount AS cashback_amount,
-    --ol.voucher_redeemed AS voucher_redeemed,
     e.deal_owner AS deal_owner,
     e.dealtitle AS Deal_title,
     m.location AS cm_location,
@@ -161,7 +155,6 @@ END AS Promo_flag,
             WHEN ol.marginPercentage < 0 THEN 0
             ELSE ol.marginPercentage END))*(SUM(ol.unitprice)) END)
     END AS GR,
-    --mc.redemption_city as redemption_city,
     cash.first_cashback_date as first_cashback_date,
     ol.merchantcode as merchantcode
   FROM (
@@ -218,34 +211,10 @@ END AS Promo_flag,
       flatcommission/100.0 AS flatcommission,
       cashbackamount/100.0 AS cashbackamount,
       merchantcode
---       CASE
---         WHEN redemptiondate IS NOT NULL OR status = 15 THEN EXACT_COUNT_DISTINCT(orderlineid)
---       END voucher_redeemed,
     FROM
       Atom.order_line
     WHERE
       ispaid = 't'
---     GROUP BY
---       1,
---       2,
---       3,
---       4,
---       5,
---       6,
---       7,
---       8,
---       9,
---       10,
---       11,
---       12,
---       13,
---       14,
---       15,
---       16,
---       17,
---       18,
---       19,
---       redemptiondate 
 ) ol
   ON
     ol.orderid = oh.orderid
@@ -269,7 +238,6 @@ END AS Promo_flag,
       Atom.deal) AS e
   ON
     ol.dealid = e.deal_id
-    -- left join (select string(merchantId) as merchantId, name , redemptionAddress.cityTown as redemption_city  from Atom.merchant) mc on mc.merchantid = ol.merchantid
     left join (select customerid, min(date(MSEC_TO_TIMESTAMP(createdat+19800000))) as first_cashback_date from Atom.order_header 
 where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash.customerid = oh.customerid
   LEFT OUTER JOIN (
@@ -355,7 +323,6 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
     paymentterm_id,
     flat_commission,
     cashback_amount,
-    --voucher_redeemed,
     deal_owner,
     Deal_title,
     cm_location,
@@ -377,7 +344,6 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
     buying_state,
     p.fpoid,
     oh.orderid,
-    --isnew,
     ol.orderid,
     ol.offerid,
     w.offer_correct,
@@ -386,7 +352,7 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
     ol.flatcommission,
     new_customer_month,
     new_customer_day,
-    source2,--redemption_city,
+    source2,
     first_cashback_date,
     redemption_city,
     redemption_state,
