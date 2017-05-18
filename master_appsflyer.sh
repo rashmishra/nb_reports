@@ -9,7 +9,7 @@ date
 
 
 # downstream_appsflyer tableloading. Replace existing
-v_query_downstream_appsflyer="SELECT --23567  --1146566
+v_query_downstream_appsflyer="SELECT
        a.order_id_new as af_order_id,
        a.imei as af_imei_number,
       a.customer_user_id as af_customer_id,
@@ -115,7 +115,6 @@ FROM (
         'transactions - success',
         'transactions',
         'af_purchase_zero')
-     -- AND is_retargeting = TRUE
     GROUP BY
       1,
       2,
