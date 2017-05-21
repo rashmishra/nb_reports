@@ -928,45 +928,12 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Completed Table 12: customer_cohort
 
 
-## Table 13: most_visited
 
 
-v_query="SELECT  customerid AS int_customerid , 
-        CAST(customerid AS STRING) AS customerid,
-        mostVisitedPlace,
-        mostVisitedPlaceCity,
-        times1,
-        Sum(total) as totalMerchants,
-        sum(selling) as sellingMerchants,
-        secMostVisitedPlace,
-        secMostVisitedPlaceCity
-        times2,
-        thirdMostVisitedPlace,
-        thirdMostVisitedPlaceCity,
-        times3
-FROM (SELECT   customerid , 
-                NTH(1, hotspot) AS mostVisitedPlace,
-                NTH(1, hotspotCity) AS mostVisitedPlaceCity,
-                NTH(1, visits) AS times1,
-                NTH(2, hotspot) AS secMostVisitedPlace,
-                NTH(2, hotspotCity) AS secMostVisitedPlaceCity,
-                NTH(2, visits) AS times2,
-                NTH(3, hotspot) AS thirdMostVisitedPlace,
-                NTH(3, hotspotCity) AS thirdMostVisitedPlaceCity,
-                NTH(3, visits) AS times3  
-      FROM (SELECT ul.customerId as customerid, mms.name as hotspot
-                    , mms.city as hotspotCity
-                    , count(hotspotEntered) as visits
-            FROM cerebro.user_location as ul
-            join Atom.mall_market_street as mms on ul.hotspotEntered = mms._id
-            where ul.hotspotEntered is not null AND ul.distanceFromHotspot < 25
-            GROUP BY 1,2,3
-      order by visits desc
-            )
-      GROUP BY 1
-) as x
+## Table 13 (a): mall_market_street_info
 
-LEFT JOIN (SELECT mallName 
+
+v_query="SELECT mallName 
                   , a polygonId, total
                   , selling, b mallMarket
                   , cityName, round(100*selling/total,2) as penetration 
@@ -1021,11 +988,112 @@ LEFT JOIN (SELECT mallName
                       )
                   GROUP BY a
                   )
-order by 6,5,7,3 desc,4 desc
-      ) as y
-on (x.mostVisitedPlace=y.mallName
-  AND x.mostVisitedPlaceCity=y.cityName)
-GROUP BY 1,2,3,4,5,8,9,10,11,12";
+order by 6,5,7,3 desc,4 desc";
+
+
+
+v_destination_tbl="${v_dataset_name}.mall_market_street_info";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating mall_market_street_info: $v_task_status";
+
+
+v_subtask="User Attributes Step 13 (a): mall_market_street_info creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 13 (a): mall_market_street_info
+
+
+
+
+## Table 13 (b): most_visited
+
+
+v_query="SELECT  customerid AS int_customerid , 
+        CAST(customerid AS STRING) AS customerid,
+        mostVisitedPlace,
+        mostVisitedPlaceCity,
+        times1,
+        m1.polygonId AS polygonId1,
+        m1.total as totalMerchants1,
+        m1.selling as sellingMerchants1,
+        secMostVisitedPlace,
+        secMostVisitedPlaceCity,
+        times2,
+        m2.polygonId AS polygonId2,
+        m2.total as totalMerchants2,
+        m2.selling as sellingMerchants2,
+        thirdMostVisitedPlace,
+        thirdMostVisitedPlaceCity,
+        times3,
+        m3.polygonId AS polygonId3,
+        m3.total as totalMerchants3,
+        m3.selling as sellingMerchants3,
+FROM (SELECT   customerid , 
+                NTH(1, hotspot) AS mostVisitedPlace,
+                NTH(1, hotspotCity) AS mostVisitedPlaceCity,
+                NTH(1, visits) AS times1,
+                NTH(2, hotspot) AS secMostVisitedPlace,
+                NTH(2, hotspotCity) AS secMostVisitedPlaceCity,
+                NTH(2, visits) AS times2,
+                NTH(3, hotspot) AS thirdMostVisitedPlace,
+                NTH(3, hotspotCity) AS thirdMostVisitedPlaceCity,
+                NTH(3, visits) AS times3
+      FROM (SELECT ul.customerId as customerid, mms.name as hotspot
+                    , mms.city as hotspotCity
+                    , count(hotspotEntered) as visits
+            FROM cerebro.user_location as ul
+            join Atom.mall_market_street as mms on ul.hotspotEntered = mms._id
+            where ul.hotspotEntered is not null AND ul.distanceFromHotspot < 25
+            GROUP BY 1,2,3
+      order by visits desc
+            )
+      GROUP BY 1
+) as x
+
+LEFT JOIN [engg_reporting.mall_market_street_info] as m1
+on (x.mostVisitedPlace=m1.mallName
+  AND x.mostVisitedPlaceCity=m1.cityName)
+LEFT JOIN  [engg_reporting.mall_market_street_info] AS m2
+on (x.secMostVisitedPlace=m2.mallName
+  AND x.secMostVisitedPlaceCity=m2.cityName)
+LEFT JOIN  [engg_reporting.mall_market_street_info] as m3
+on (x.thirdMostVisitedPlace=m3.mallName
+  AND x.thirdMostVisitedPlaceCity=m3.cityName)
+GROUP BY int_customerid, 
+          customerid, 
+          mostVisitedPlace, 
+          mostVisitedPlaceCity, 
+          times1, 
+          polygonId1, 
+          totalMerchants1, 
+          sellingMerchants1, 
+          secMostVisitedPlace,
+          secMostVisitedPlaceCity, 
+          times2, 
+          polygonId2, 
+          totalMerchants2, 
+          sellingMerchants2, 
+          thirdMostVisitedPlace, 
+          thirdMostVisitedPlaceCity, 
+          times3, 
+          polygonId3, 
+          totalMerchants3, 
+          sellingMerchants3";
 
 v_destination_tbl="${v_dataset_name}.most_visited";
 
@@ -1050,7 +1118,7 @@ echo `date` "Creating most_visited: $v_task_status";
 v_subtask="User Attributes Step 13: most_visited creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 13: most_visited
+## Completed Table 13 (b): most_visited
 
 
 
@@ -1649,15 +1717,30 @@ v_query="select
   (j.email_open+ j.email_click) as email_open,
   j.email_click AS email_click,
   j.email_unsubscribe AS email_unsubscribe,
+  
   l.mostVisitedPlace AS mostVisitedPlace,
   l.mostVisitedPlaceCity AS mostVisitedPlaceCity,
   l.times1 as mostVisitedTimes,
-  l.totalMerchants as totalMerchantsAtMostVisitedPlace ,
-  l.sellingMerchants as sellingMerchantsAtMostVisitedPlace,
+  l.totalMerchants1 AS totalMerchantsAtMostVisitedPlace, 
+  l.sellingMerchants1 AS sellingMerchantsAtMostVisitedPlace, 
+  l.polygonId1 AS mostVisitedPlacePolygonId,
+
   l.secMostVisitedPlace as secMostVisitedPlace,
+  l.secMostVisitedPlaceCity AS secMostVisitedPlaceCity,
   l.times2 as secMostVisitedTimes,
+  l.totalMerchants2 AS totalMerchantsAtSecMostVisitedPlace, 
+  l.sellingMerchants2 AS sellingMerchantsAtSecMostVisitedPlace, 
+  l.polygonId2 AS secMostVisitedPlacePolygonId,
+
+  
   l.thirdMostVisitedPlace as thirdMostVisitedPlace,
+  l.thirdMostVisitedPlaceCity AS thirdMostVisitedPlaceCity,
   l.times3 as thirdMostVisitedTimes,
+  l.totalMerchants3 AS totalMerchantsAtThirdMostVisitedPlace, 
+  l.sellingMerchants3 AS sellingMerchantsAtThirdMostVisitedPlace, 
+  l.polygonId3 AS thirdMostVisitedPlacePolygonId,
+
+
   m.avgRating as totalAvgRating,
   m.timesRatingGiven as timesRated,
   m.mostRatedMerchant AS mostRatedMerchant,
@@ -1709,20 +1792,8 @@ left join
   [engg_reporting.engagement_behaviour] j
   on (a.customerid=j.customerid)
 
-left join(
-select
-  string( customerid ) as customerid,
-  mostVisitedPlace,
-  mostVisitedPlaceCity,
-  times1,
-  totalMerchants,
-  sellingMerchants,
-  secMostVisitedPlace,
-  times2,
-  thirdMostVisitedPlace,
-  times3,
-from
-  [engg_reporting.most_visited]) l
+left join 
+  [engg_reporting.most_visited] l
   on (a.customerid=l.customerid)
 
 left join(

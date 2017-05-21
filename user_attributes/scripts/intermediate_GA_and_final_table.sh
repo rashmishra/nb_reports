@@ -1006,15 +1006,29 @@ non_ga.customerid AS customerid
 , non_ga.email_open AS email_open
 , non_ga.email_click AS email_click
 , non_ga.email_unsubscribe AS email_unsubscribe
+
 , non_ga.mostVisitedPlace AS mostVisitedPlace
 , non_ga.mostVisitedPlaceCity AS mostVisitedPlaceCity
 , non_ga.mostVisitedTimes AS mostVisitedTimes
 , non_ga.totalMerchantsAtMostVisitedPlace AS totalMerchantsAtMostVisitedPlace
 , non_ga.sellingMerchantsAtMostVisitedPlace AS sellingMerchantsAtMostVisitedPlace
+, non_ga.mostVisitedPlacePolygonId AS mostVisitedPlacePolygonId
+
 , non_ga.secMostVisitedPlace AS secMostVisitedPlace
+, non_ga.secMostVisitedPlaceCity AS secMostVisitedPlaceCity
 , non_ga.secMostVisitedTimes AS secMostVisitedTimes
+, non_ga.totalMerchantsAtSecMostVisitedPlace AS totalMerchantsAtSecMostVisitedPlace
+, non_ga.sellingMerchantsAtSecMostVisitedPlace AS sellingMerchantsAtSecMostVisitedPlace
+, non_ga.secMostVisitedPlacePolygonId AS secMostVisitedPlacePolygonId
+
 , non_ga.thirdMostVisitedPlace AS thirdMostVisitedPlace
+, non_ga.thirdMostVisitedPlaceCity AS thirdMostVisitedPlaceCity
 , non_ga.thirdMostVisitedTimes AS thirdMostVisitedTimes
+, non_ga.totalMerchantsAtThirdMostVisitedPlace AS totalMerchantsAtThirdMostVisitedPlace
+, non_ga.sellingMerchantsAtThirdMostVisitedPlace AS sellingMerchantsAtThirdMostVisitedPlace
+, non_ga.thirdMostVisitedPlacePolygonId AS thirdMostVisitedPlacePolygonId
+
+
 , non_ga.totalAvgRating AS totalAvgRating
 , non_ga.timesRated AS timesRated
 , non_ga.mostRatedMerchant AS mostRatedMerchant
@@ -1107,8 +1121,7 @@ ga.SNM_pricepoint_browsed as SNM_pricepoint_browsed,
 
 FROM  [big-query-1233:engg_reporting.user_attributes_non_GA] non_ga
 LEFT JOIN [big-query-1233:engg_reporting.user_attributes_ga_combined] ga
-on (non_ga.customerid=ga.customerid)
-  ";
+on (non_ga.customerid=ga.customerid)";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_final";
