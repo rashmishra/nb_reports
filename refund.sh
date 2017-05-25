@@ -13,10 +13,12 @@ v_query_refund="SELECT
        YEAR(MSEC_TO_TIMESTAMP(COALESCE(ol.closedat, refunded_at) +19800000)) AS refunded_year
       , MONTH((MSEC_TO_TIMESTAMP(COALESCE(ol.closedat, refunded_at)+19800000))) AS refunded_month
       , DAY(MSEC_TO_TIMESTAMP(COALESCE(ol.closedat, refunded_at)+19800000)) AS refunded_day
+      ,Date(MSEC_TO_TIMESTAMP(COALESCE(ol.closedat, refunded_at) +19800000)) as Refund_Date
 
       , YEAR(MSEC_TO_TIMESTAMP(ol.createdat + 19800000)) AS purchased_year
       , MONTH(MSEC_TO_TIMESTAMP(ol.createdat + 19800000)) AS purchased_month
       , DAY(MSEC_TO_TIMESTAMP(ol.createdat + 19800000)) AS purchased_day
+      , DAte(MSEC_TO_TIMESTAMP(ol.createdat + 19800000)) AS purchase_date
       , ol.orderid as refunded_order_id
       , ol.orderlineid AS orderline_id
 
@@ -91,10 +93,10 @@ LEFT OUTER JOIN
 GROUP BY purchased_year, purchased_month, purchased_day, orderline_id, refunded_order_id, deal_id, deal_title
          , offer_id, category_id, merchant_name, offer_title, refunded_gb, promo_amount_reversal
          , promocode, flat_commission, margin_percent, GR, refunded_year, refunded_month
-         , refunded_day, city_manager, deal_owner, customer_comment, refunded_source, merchant_id, cashback_amount,city_manager_location
+         , refunded_day, city_manager, deal_owner, customer_comment, refunded_source, merchant_id, cashback_amount,city_manager_location,
+         refund_date, purchase_date
          
-         order by 1 desc
-          
+         order by 1 desc       
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
 

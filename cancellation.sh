@@ -13,10 +13,11 @@ v_query_cancellation="SELECT
         YEAR(MSEC_TO_TIMESTAMP(ol.cancelledAt+19800000)) AS cancellation_year
       , MONTH((MSEC_TO_TIMESTAMP(ol.cancelledAt+19800000))) AS cancellation_month
       , DAY(MSEC_TO_TIMESTAMP(ol.cancelledAt+19800000)) AS cancellation_day
-
+, DATE(MSEC_TO_TIMESTAMP(ol.cancelledAt+19800000)) AS cancellation_date
       , YEAR(MSEC_TO_TIMESTAMP(ol.createdat + 19800000)) AS purchased_year
       , MONTH(MSEC_TO_TIMESTAMP(ol.createdat + 19800000)) AS purchased_month
       , DAY(MSEC_TO_TIMESTAMP(ol.createdat + 19800000)) AS purchased_day
+      , DATE(MSEC_TO_TIMESTAMP(ol.createdat + 19800000)) AS purchased_date
       , ol.orderid as cancelled_order_id
       , ol.orderlineid AS cancelled_orderline_id
 
@@ -91,7 +92,8 @@ LEFT OUTER JOIN
 GROUP BY cancellation_year, cancellation_month, cancellation_day, cancelled_orderline_id, cancelled_order_id, deal_id, deal_title
          , offer_id, category_id, merchant_name, offer_title, cancelled_gb, promo_amount_reversal
          , promocode, flat_commission, margin_percent, GR, purchased_year, purchased_month
-         , purchased_day, city_manager, deal_owner, customer_comment, cancellation_source, merchant_id, cashback_amount,GR,city_manager_location
+         , purchased_day, city_manager, deal_owner, customer_comment, cancellation_source, merchant_id, cashback_amount,GR,city_manager_location,
+         purchased_date,cancellation_date
          
          order by 1 desc
         
