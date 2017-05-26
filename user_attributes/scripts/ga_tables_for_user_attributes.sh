@@ -55,7 +55,7 @@ v_dataset_name="engg_reporting";
 ## Pulls effective date range of GA Sessions for each user
 
 v_query="SELECT Customer_ID, MIN(CAST(DATE(first_session_date) AS DATE)) first_session_date
-       , MAX(CAST(DATE(MAX( session_date)) AS DATE)) AS latest_session_date
+       , MAX(CAST(DATE( session_date ) AS DATE)) AS latest_session_date
        , MAX( session_date) AS latest_session_date_int
        , CAST(DATE(DATE_ADD(DATE(MAX( session_date)), -91, 'DAY')) AS DATE) as effective_since_session_date
        , STRING(CAST(DATE(DATE_ADD(DATE(MAX( session_date)), -91, 'DAY')) AS DATE)) as effective_since_session_date_int
