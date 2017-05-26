@@ -1821,9 +1821,9 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Table 17: user_attributes_merchant_name
 
 
-v_query="SELECT  p.dealId AS dealId
-        , m.merchantName AS merchantName
-        , m.merchantId as merchantID
+v_query="SELECT  p.dealId AS Deal_ID
+        , m.merchantName AS Merchant_Name
+        , m.merchantId as Merchant_ID
 FROM (SELECT
         id AS dealId,
         CASE
@@ -1836,6 +1836,7 @@ JOIN (
         SELECT  STRING( merchantId ) AS merchantId
                 , name AS merchantName
         FROM [big-query-1233:Atom.merchant] 
+        WHERE isPublished = true
   ) AS m
 ON  m.merchantId = p.merchantId
 GROUP BY 1,  2,  3";

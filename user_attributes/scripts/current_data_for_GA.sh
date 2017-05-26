@@ -514,6 +514,8 @@ v_query="SELECT  dim.Customer_ID AS Customer_ID
         , c.Category AS Category 
         , c.city AS city 
         , c.channelGrouping AS channelGrouping
+        , merc.Merchant_ID AS Merchant_ID
+        , FIRST(merc.Merchant_Name) AS Merchant_Name
 FROM [engg_reporting.user_attributes_ga_session_history] dim
 LEFT JOIN (SELECT *
            FROM engg_reporting.user_attributes_ga_group_C_base_current cur, 
@@ -521,7 +523,10 @@ LEFT JOIN (SELECT *
 ) c
 ON dim.Session_ID = c.sessionid
 AND dim.source = c.Platform
-WHERE DATE(c.date) BETWEEN DATE(dim.effective_since_session_date) AND DATE( dim.latest_session_date)";
+LEFT JOIN [engg_reporting.user_attributes_merchant_name] merc
+    ON c.dealID = merc.Deal_ID
+WHERE DATE(c.date) BETWEEN DATE(dim.effective_since_session_date) AND DATE( dim.latest_session_date)
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_C_effective";
