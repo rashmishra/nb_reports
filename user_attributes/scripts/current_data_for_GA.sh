@@ -52,6 +52,7 @@ v_dataset_name="engg_reporting";
 
 ### Web
 v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
        , 'Web' AS Platform
        , date
        , hits.page.searchKeyword AS searchKeyword
@@ -60,7 +61,7 @@ v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
 FROM TABLE_DATE_RANGE([108795712.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
 WHERE geoNetwork.city IS NOT NULL
    OR hits.page.searchKeyword IS NOT NULL
-GROUP BY 1, 2, 3, 4, 5";
+GROUP BY 1, 2, 3, 4, 5, 6";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_A_base_current";
@@ -89,6 +90,7 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ### iOS
 v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
        , 'iOS' AS Platform
        , date
        , FIRST(IF(hits.product.customDimensions.index = 90, hits.product.customDimensions.value, NULL)) AS searchKeyword
@@ -96,7 +98,7 @@ v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
 
 FROM TABLE_DATE_RANGE([118341991.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
 WHERE hits.product.customDimensions.index IN (90, 94)
-GROUP BY 1, 2, 3";
+GROUP BY 1, 2, 3, 4";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_A_base_current";
@@ -125,6 +127,7 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ### Android
 v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
        , 'Android' AS Platform
        , date
        , FIRST(IF(hits.product.customDimensions.index = 90, hits.product.customDimensions.value, NULL)) AS searchKeyword
@@ -132,7 +135,7 @@ v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
 
 FROM TABLE_DATE_RANGE([118356700.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
 WHERE hits.product.customDimensions.index IN (90, 94)
-GROUP BY 1, 2, 3";
+GROUP BY 1, 2, 3, 4";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_A_base_current";
@@ -180,6 +183,7 @@ echo "Table Group A Current data garnering completed at " `date`;
 
 ### Web
 v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
        , 'Web' AS Platform
        , date AS date
        , device.browser AS deviceBrowser
@@ -192,7 +196,7 @@ v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
        , FIRST(IF(customDimensions.index = 7, customDimensions.value, NULL)) AS Customer_ID 
 
 FROM TABLE_DATE_RANGE([108795712.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9";
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_B_base_current";
@@ -221,6 +225,7 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ### iOS
 v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
        , 'iOS' AS Platform
        , date AS date
        , device.browser AS deviceBrowser
@@ -233,7 +238,7 @@ v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
        , FIRST(IF(customDimensions.index = 7, customDimensions.value, NULL)) AS Customer_ID 
 
 FROM TABLE_DATE_RANGE([118341991.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9";
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_B_base_current";
@@ -262,6 +267,7 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ### Android
 v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
        , 'Android' AS Platform
        , date AS date
        , device.browser AS deviceBrowser
@@ -274,7 +280,7 @@ v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
        , FIRST(IF(customDimensions.index = 7, customDimensions.value, NULL)) AS Customer_ID 
 
 FROM TABLE_DATE_RANGE([118356700.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9";
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_B_base_current";
@@ -325,6 +331,7 @@ echo "Table Group B current data garnering completed at " `date`;
 
 ### Web
 v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
        , 'Web' AS Platform
        , date
        , hits.eCommerceAction.action_type 
@@ -335,7 +342,7 @@ v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
 
 FROM TABLE_DATE_RANGE([108795712.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
 WHERE hits.eCommerceAction.action_type  IN  ( '2', '6')
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8";
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_C_base_current";
@@ -364,6 +371,7 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ### iOS
 v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
        , 'iOS' AS Platform
        , date
        , hits.eCommerceAction.action_type 
@@ -374,7 +382,7 @@ v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
 
 FROM TABLE_DATE_RANGE([118341991.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
 WHERE hits.eCommerceAction.action_type  IN  ( '2', '6')
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8";
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_C_base_current";
@@ -403,6 +411,7 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ### Android
 v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
        , 'Android' AS Platform
        , date
        , hits.eCommerceAction.action_type 
@@ -413,7 +422,7 @@ v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
 
 FROM TABLE_DATE_RANGE([118356700.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
 WHERE hits.eCommerceAction.action_type  IN  ( '2', '6')
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8";
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_C_base_current";
@@ -497,6 +506,7 @@ v_query="SELECT  dim.Customer_ID AS Customer_ID
         , dim.effective_since_session_date AS effective_since_session_date
         , dim.latest_session_date AS latest_session_date
         , c.sessionid AS sessionid
+        , c.visitStartTime AS visitStartTime
         , c.Platform AS Platform 
         , c.date AS date 
         , c.hits_eCommerceAction_action_type as action_type
@@ -504,6 +514,8 @@ v_query="SELECT  dim.Customer_ID AS Customer_ID
         , c.Category AS Category 
         , c.city AS city 
         , c.channelGrouping AS channelGrouping
+        , merc.Merchant_ID AS Merchant_ID
+        , FIRST(merc.Merchant_Name) AS Merchant_Name
 FROM [engg_reporting.user_attributes_ga_session_history] dim
 LEFT JOIN (SELECT *
            FROM engg_reporting.user_attributes_ga_group_C_base_current cur, 
@@ -511,7 +523,10 @@ LEFT JOIN (SELECT *
 ) c
 ON dim.Session_ID = c.sessionid
 AND dim.source = c.Platform
-WHERE DATE(c.date) BETWEEN DATE(dim.effective_since_session_date) AND DATE( dim.latest_session_date)";
+LEFT JOIN [engg_reporting.user_attributes_merchant_name] merc
+    ON c.dealID = merc.Deal_ID
+WHERE DATE(c.date) BETWEEN DATE(dim.effective_since_session_date) AND DATE( dim.latest_session_date)
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_C_effective";
@@ -546,6 +561,7 @@ v_query="SELECT  dim.Customer_ID AS Customer_ID
         , dim.effective_since_session_date AS effective_since_session_date
         , dim.latest_session_date AS latest_session_date
         , b.sessionid AS sessionid
+        , b.visitStartTime AS visitStartTime
         , b.Platform AS Platform 
         , b.date AS date 
         , b.deviceBrowser as deviceBrowser
@@ -588,6 +604,55 @@ echo `date` "Creating GA effective data for Table GROUP B 'user_attributes_ga_gr
 
 v_subtask="GA effective data for Table GROUP B 'user_attributes_ga_group_B_effective' ";
 p_exit_upon_error "$v_task_status" "$v_subtask";
+
+
+# Group A 
+
+v_query="SELECT  dim.Customer_ID AS Customer_ID
+        , dim.first_session_date AS first_session_date
+        , dim.effective_since_session_date AS effective_since_session_date
+        , dim.latest_session_date AS latest_session_date
+        , a.sessionid AS sessionid
+        , a.visitStartTime AS visitStartTime
+        , a.Platform AS Platform 
+        , a.date AS date 
+        , a.searchKeyword AS searchKeyword
+        , a.locationServices AS locationServices
+FROM [engg_reporting.user_attributes_ga_session_history] dim
+LEFT JOIN (SELECT *
+           FROM engg_reporting.user_attributes_ga_group_A_base_current cur, 
+                [engg_reporting.user_attributes_ga_group_A_base_till_Apr2017] old
+) a
+ON dim.Session_ID = a.sessionid
+AND dim.source = a.Platform
+WHERE DATE(a.date) BETWEEN DATE(dim.effective_since_session_date) AND DATE( dim.latest_session_date)";
+
+
+v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_A_effective";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating GA effective data for Table Group A 'user_attributes_ga_group_A_effective' : $v_task_status";
+
+
+v_subtask="GA effective data for Table Group A 'user_attributes_ga_group_A_effective' ";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+
+# End of Group A 
 
 ###--------------######--------------######--------------######--------------######--------------###
           ###--------------### End of fetching effective data ###--------------###
