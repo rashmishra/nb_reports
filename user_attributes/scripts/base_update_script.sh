@@ -1816,6 +1816,57 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Completed Table 16: user_attributes_non_GA
 
 
+
+
+## Table 17: user_attributes_merchant_name
+
+
+v_query="SELECT  p.dealId AS dealId
+        , m.merchantName AS merchantName
+        , m.merchantId as merchantID
+FROM (SELECT
+        id AS dealId,
+        CASE
+          WHEN mappings.chain.id IS NOT NULL THEN mappings.chain.id
+          ELSE mappings.merchant.id
+        END AS merchantId,
+      FROM FLATTEN(FLATTEN(Atom.mapping, mappings.merchant),mappings.chain)
+    ) AS p
+JOIN (
+        SELECT  STRING( merchantId ) AS merchantId
+                , name AS merchantName
+        FROM [big-query-1233:Atom.merchant] 
+  ) AS m
+ON  m.merchantId = p.merchantId
+GROUP BY 1,  2,  3";
+
+
+v_destination_tbl="${v_dataset_name}.user_attributes_merchant_name";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating Final Table  'user_attributes_merchant_name' : $v_task_status";
+
+
+v_subtask="Final Table  'user_attributes_merchant_name' ";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+
+## Completed Table 17
+
 v_task_end_time=`date`;
 
 
