@@ -273,7 +273,11 @@ if wait $v_txn_tbl_pids;
 else v_table_status="Code failed in one or more table loads" ;
 fi
 
-echo "Sold out Table in nb_reports data set status:$v_table_status`date`" | mail -s "$v_table_status" rahul.sachan@nearbuy.com 
+bq extract nb_reports.sold_out gs://nb_reports/sold_out_deals.csv
+gsutil cp gs://nb_reports/sold_out_deals.csv /home/ubuntu/nb_reports
+aws s3 mv /home/ubuntu/nb_reports/sold_out_deals.sh  s3://nb-base/redirects/
+
+echo "Sold out deals data file uploaded in s3 :$v_table_status`date`" | mail -s "$v_table_status" rahul.sachan@nearbuy.com 
 
 
 ##mutt -s "Atom Refresh: All Extracts status:  $v_all_extracts_status`date` "  -- sairanganath.v@nearbuy.com rahul.sachan@nearbuy.com rashmi.mishra@nearbuy.com < /dev/null
