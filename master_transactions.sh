@@ -46,7 +46,8 @@ END AS Promo_flag,
   deal_owner,
   deal_title,
   cm_location,
-  city_manager,
+  business_head ,
+  a_business_head,
   category_id,
   transaction_id,
   payment_flag,
@@ -78,6 +79,7 @@ END AS Promo_flag,
   y.has_user_transacted as promo_has_user_transacted,
   first_cashback_date,
   merchantcode as merchant_code,
+  paymenttype as paymenttype,
     SUM(Number_of_Vouchers) AS number_of_vouchers,
   Round(SUM(GR),2) AS GR,
   Round(SUM(activation_cost),2) AS customer_aquisition_cost,
@@ -121,7 +123,8 @@ END AS Promo_flag,
     e.deal_owner AS deal_owner,
     e.dealtitle AS Deal_title,
     m.location AS cm_location,
-    m.manager AS city_manager,
+    m.business_head AS business_head ,
+    m.a_business_head as a_business_head,
     CASE
       WHEN ol.orderid > 1991486 THEN ol.categoryid
       ELSE e.category
@@ -156,7 +159,8 @@ END AS Promo_flag,
             ELSE ol.marginPercentage END))*(SUM(ol.unitprice)) END)
     END AS GR,
     cash.first_cashback_date as first_cashback_date,
-    ol.merchantcode as merchantcode
+    ol.merchantcode as merchantcode,
+    oh.paymenttype as paymenttype
   FROM (
     SELECT
       orderid,
@@ -171,7 +175,8 @@ END AS Promo_flag,
       buyinglat,
       buyinglong,
       deviceid,
-      referralprogramid     
+      referralprogramid,
+      paymenttype
     FROM
       Atom.order_header
     WHERE
@@ -188,7 +193,7 @@ END AS Promo_flag,
       9,
       10,
       11,
-      12,13 ) oh
+      12,13,14 ) oh
   INNER JOIN (
     SELECT
       orderid,
@@ -267,7 +272,7 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
   ON
     T.orderid = oh.orderid
   LEFT OUTER JOIN
-    BI_Automation.sales_rep_mapping AS m
+    nb_reports.sales_rep_mapping AS m
   ON
     m.sales_rep = e.deal_owner
   LEFT OUTER JOIN (
@@ -326,7 +331,8 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
     deal_owner,
     Deal_title,
     cm_location,
-    city_manager,
+    business_head ,
+    a_business_head,
     ol.orderid,
     orderline_status,
     ol.categoryid,
@@ -358,7 +364,8 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
     redemption_state,
     first_transaction,
     referralprogramid,
-    merchantcode
+    merchantcode,
+    paymenttype
     ) x
     
 LEFT join
@@ -380,8 +387,8 @@ LEFT join
     
     ) y  on x.promocode = y.promocode_id and x.source2 = y.source
     
-    Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,52,53,54,55,56,57,58,59,60,61
-          
+    Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,52,53,54,55,56,57,58,59,60,61,62,63
+           
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
 
