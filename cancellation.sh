@@ -36,7 +36,7 @@ v_query_cancellation="SELECT
 
 ,Round(GR,2) as GR
              , ol.cashbackamount as cashback_amount
-      , m.manager AS city_manager
+      , m.business_head AS city_manager
       , ol.dealowner AS deal_owner
       , e.Customer_comments as customer_comment
       , e.Cancellation_source AS cancellation_source
@@ -86,7 +86,7 @@ LEFT JOIN  (SELECT t.orderid AS txn_orderid
                AND ol.orderid = e.txn_orderid
 
 LEFT OUTER JOIN
-    BI_Automation.sales_rep_mapping AS m
+    nb_reports.sales_rep_mapping AS m
   ON
     m.sales_rep = ol.dealOwner
 GROUP BY cancellation_year, cancellation_month, cancellation_day, cancelled_orderline_id, cancelled_order_id, deal_id, deal_title
@@ -95,7 +95,7 @@ GROUP BY cancellation_year, cancellation_month, cancellation_day, cancelled_orde
          , purchased_day, city_manager, deal_owner, customer_comment, cancellation_source, merchant_id, cashback_amount,GR,city_manager_location,
          purchased_date,cancellation_date
          
-         order by 1 desc
+    
         
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";

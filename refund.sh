@@ -38,7 +38,7 @@ v_query_refund="SELECT
 --       , CASE WHEN ol.marginpercentage IS NULL THEN ((CASE WHEN ol.flatcommission < 0 THEN 0 ELSE ol.flatcommission END))*1 
 --              ELSE ((CASE WHEN ol.marginpercentage < 0 THEN 0 ELSE ol.marginpercentage END))*(ol.unitprice) END AS GR
              , ol.cashbackamount as cashback_amount
-      , m.manager AS city_manager
+      , m.business_head AS city_manager
       , ol.dealowner AS deal_owner
       , e.Customer_comments as customer_comment
       , e.Cancellation_source AS refunded_source
@@ -87,7 +87,7 @@ LEFT JOIN  (SELECT t.orderid AS txn_orderid
                AND ol.orderid = e.txn_orderid
 
 LEFT OUTER JOIN
-    BI_Automation.sales_rep_mapping AS m
+    [nb_reports.sales_rep_mapping]  AS m
   ON
     m.sales_rep = ol.dealOwner
 GROUP BY purchased_year, purchased_month, purchased_day, orderline_id, refunded_order_id, deal_id, deal_title
