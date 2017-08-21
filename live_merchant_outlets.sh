@@ -1,3 +1,8 @@
+#!/bin/bash
+
+
+# Script Name: live_merchant_outlets.sh
+# Purpose: To generate the Live (Open)/ Closed status of an outlet of a merchant.
 
 # SELECT CURRENT_DATE() AS reporting_date
 #       , merchantId AS Merchant_ID
