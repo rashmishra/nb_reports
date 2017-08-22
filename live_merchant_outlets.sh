@@ -42,7 +42,8 @@ v_todays_live_outlets="SELECT CURRENT_DATE() AS reporting_date
       , isChain
       , redemptionAddress.cityTown AS Redemption_Town
       , businessAddress.cityTown AS Business_Town
-FROM Atom.merchant";
+FROM Atom.merchant
+WHERE isPublished = TRUE";
 
 
 
