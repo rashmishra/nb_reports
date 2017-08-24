@@ -8,7 +8,7 @@ date
 
 
 # sold_out table loading. Replace existing
-v_sold_out="SELECT inActiveDealId,inActiveDealCat,merchantID,activeDealId,active_deal_city,activeLocality,flag
+v_sold_out="SELECT inActiveDealId as in_active_deal_id ,inActiveDealCat as in_active_deal_cat, inactive_deal_city, merchantID as merchant_id, activeDealId as active_deal_id, activeDealCat as active_deal_cat, active_deal_city,activePermalink as active_permalink, activeLocality as active_locality,flag
 FROM 
 (SELECT inActiveDealId, inActiveDealCat, inactive_deal_city, merchantID, activeDealId
        , activeDealCat, active_deal_city, activePermalink, activeLocality, flag
