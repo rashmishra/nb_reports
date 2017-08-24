@@ -8,10 +8,10 @@ date
 
 
 # sold_out table loading. Replace existing
-v_sold_out="SELECT inActiveDealId,inactive_deal_city,merchantID,activeDealId,active_deal_city,activeLocality,flag
+v_sold_out="SELECT inActiveDealId,inActiveDealCat,merchantID,activeDealId,active_deal_city,activeLocality,flag
 FROM 
-(SELECT inActiveDealId, inActiveDealCat inactive_deal_city, merchantID, activeDealId
-       , activeDealCat active_deal_city, activePermalink activeLocality, flag
+(SELECT inActiveDealId, inActiveDealCat, inactive_deal_city, merchantID, activeDealId
+       , activeDealCat, active_deal_city, activePermalink, activeLocality, flag
 FROM 
 (SELECT fq_tbl989.inActiveDealId AS inActiveDealId, fq_tbl989.inActiveDealCat AS inActiveDealCat
        , fq_tbl987.cityName as inactive_deal_city, fq_tbl989.merchantId as merchantID
@@ -141,8 +141,8 @@ FROM
 ) fq
 , 
 
-(SELECT inActiveDealId, inActiveDealCat inactive_deal_city, merchantID, activeDealId
-       , activeDealCat active_deal_city, activePermalink activeLocality, flag
+(SELECT inActiveDealId, inActiveDealCat, inactive_deal_city, merchantID, activeDealId
+       , activeDealCat, active_deal_city, activePermalink, activeLocality, flag
 FROM 
 (SELECT sq_tbl100.inActiveDealId AS inActiveDealId, sq_tbl100.inActiveDealCat AS inActiveDealCat
         , sq_tbl100.inactive_deal_city AS inactive_deal_city, sq_tbl100.merchantId AS merchantId
