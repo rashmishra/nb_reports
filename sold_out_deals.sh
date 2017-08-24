@@ -246,7 +246,7 @@ LEFT JOIN  (SELECT activeDealId, city, \"multiple\" as flag
     AND sq_tbl101.city=sq_tbl100.active_deal_city
 )
 ) sq
-GROUP BY 1, 2, 3, 4, 5, 6, 7"
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10"
 ##echo -e "Query: \n $v_query_sold_out table";
 
 tableName=sold_out
