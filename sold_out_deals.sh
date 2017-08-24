@@ -275,7 +275,7 @@ fi
 
 bq extract nb_reports.sold_out gs://nb_reports/sold_out_deals.csv
 gsutil cp gs://nb_reports/sold_out_deals.csv /home/ubuntu/nb_reports
-aws s3 mv /home/ubuntu/nb_reports/sold_out_deals.sh  s3://nb-base/redirects/
+aws s3 mv /home/ubuntu/nb_reports/sold_out_deals.csv  s3://nb-base/redirects/
 
 echo "Sold out deals data file uploaded in s3 :$v_table_status`date`" | mail -s "$v_table_status" rahul.sachan@nearbuy.com 
 
