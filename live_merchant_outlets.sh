@@ -212,7 +212,7 @@ if wait $v_can_tbl_pids;
 else v_table_status="Code failed in one or more table loads" ;
 fi
 
-echo "Completed generating Merchant Outlet's live status with status: $v_table_status `date`" | mail -s "Live Merchant Outlets: $v_table_status" rashmi.mishra@nearbuy.com sairanganath.v@nearbuy.com;
+echo "Completed generating Merchant Outlet's live status with status: $v_table_status `date` on `hostname -I`" | mail -s "Live Merchant Outlets: $v_table_status" rashmi.mishra@nearbuy.com sairanganath.v@nearbuy.com;
 
 
 exit 0
