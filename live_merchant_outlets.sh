@@ -110,8 +110,7 @@ bq rm  -f temp.nb_reports_merchant_outlets_live_today
 
 
 # Live Deals information
-v_todays_live_deals="SELECT 
- date(msec_to_timestamp(now()/1000-24*60*60*1000 + 19800000)) as date,
+v_todays_live_deals="SELECT CURRENT_DATE() as date,
  _id as Deal_ID, 
       merchant._id AS Merchant_ID, 
     CAST(MAX(CAST(offers.isActive AS INTEGER)) AS BOOLEAN) as Is_Deal_Active
@@ -123,8 +122,7 @@ v_todays_live_deals="SELECT
                   where startDate < (now()/1000-24*60*60*1000 + 19800000) and  endDate > (now()/1000-24*60*60*1000 + 19800000)
                     AND offers.isActive = TRUE and isActive = TRUE
                     AND (offers.calender.remainingQuantity IS NULL OR  offers.calender.remainingQuantity > 0)
-                    
- GROUP BY Deal_ID, Merchant_ID, date";
+GROUP BY Deal_ID, Merchant_ID, date";
 
 
 bq query --replace --allow_large_results -n 1 --destination_table "temp.todays_live_deals" "$v_todays_live_deals" &
