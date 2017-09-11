@@ -62,7 +62,7 @@ fi
 
 date
 
-v_prior_live_outlets="SELECT * FROM nb_reports.merchant_outlets_live_status WHERE DATE(reporting_date) <> DATE_ADD(CURRENT_DATE(), -1, 'DAY') ";
+v_prior_live_outlets="SELECT * FROM nb_reports.merchant_outlets_live_status WHERE DATE(reporting_date) <> DATE(DATE_ADD(CURRENT_DATE(), -1, 'DAY')) ";
 
 bq query --replace --allow_large_results -n 1 --destination_table "temp.nb_reports_merchant_outlets_live_prior" "$v_prior_live_outlets" &
 v_first_pid=$!
@@ -140,7 +140,7 @@ date
 
 
 # Previous day's outlets with Deal IDs
-v_prior_outlet_with_deals="SELECT * FROM nb_reports.outlets_open_with_deals WHERE DATE(reporting_date) <> DATE_ADD(CURRENT_DATE(), -1, 'DAY')";
+v_prior_outlet_with_deals="SELECT * FROM nb_reports.outlets_open_with_deals WHERE DATE(reporting_date) <> DATE(DATE_ADD(CURRENT_DATE(), -1, 'DAY'))";
 
 bq query --replace  --allow_large_results -n 1 --destination_table "temp.nb_reports_prior_outlets_open_with_deals" "${v_prior_outlet_with_deals}" &
 v_first_pid=$!
