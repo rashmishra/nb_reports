@@ -29,7 +29,7 @@
 
 
 # All Outlets' Open/ Closed status
-v_todays_live_outlets="SELECT CURRENT_DATE() AS reporting_date
+v_todays_live_outlets="SELECT DATE(DATE_ADD(CURRENT_DATE(), -1, 'DAY')) AS reporting_date
       , merchantId AS Merchant_ID
       , MSEC_TO_TIMESTAMP(createdAt + 19800000) AS Merchant_creation
       , MSEC_TO_TIMESTAMP(lastUpdateAt + 19800000) AS Merchant_last_update
@@ -110,7 +110,7 @@ bq rm  -f temp.nb_reports_merchant_outlets_live_today
 
 
 # Live Deals information
-v_todays_live_deals="SELECT CURRENT_DATE() as date,
+v_todays_live_deals="SELECT DATE(DATE_ADD(CURRENT_DATE(), -1, 'DAY')) as date,
  _id as Deal_ID, 
       merchant._id AS Merchant_ID, 
     CAST(MAX(CAST(offers.isActive AS INTEGER)) AS BOOLEAN) as Is_Deal_Active
