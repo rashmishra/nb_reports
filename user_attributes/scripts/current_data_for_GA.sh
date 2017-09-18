@@ -163,6 +163,39 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 
 
+### mWeb
+v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
+       , 'Web' AS Platform
+       , date
+       , hits.page.searchKeyword AS searchKeyword
+       , geoNetwork.city  AS locationServices
+
+FROM TABLE_DATE_RANGE([157529880.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
+WHERE geoNetwork.city IS NOT NULL
+   OR hits.page.searchKeyword IS NOT NULL
+GROUP BY 1, 2, 3, 4, 5, 6";
+
+
+v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_A_base_current";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --append -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --append -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating GA current data for Table Group A 'user_attributes_ga_group_A_base_current' May 17 - today mWeb: $v_task_status";
+
 
 
 
@@ -217,6 +250,48 @@ else
 fi
 
 echo `date` "Creating GA current data for Table Group B 'user_attributes_ga_group_B_base_current' May 17 - today Web: $v_task_status";
+
+
+v_subtask="GA current data for Table Group B 'user_attributes_ga_group_B_base_current' May 17 - today Web";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+
+### mWeb
+v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
+       , 'Web' AS Platform
+       , date AS date
+       , device.browser AS deviceBrowser
+       , geoNetwork.city as city
+       , device.operatingSystem AS operatingSystem
+       , device.operatingSystemVersion AS operatingSystemVersion
+       , device.screenResolution AS screenResolution
+       , device.mobileDeviceInfo AS mobileDeviceInfo
+       , FIRST(IF(customDimensions.index = 53, customDimensions.value, NULL)) AS userConnection
+       , FIRST(IF(customDimensions.index = 7, customDimensions.value, NULL)) AS Customer_ID 
+
+FROM TABLE_DATE_RANGE([157529880.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10";
+
+
+v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_B_base_current";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --append -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --append -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating GA current data for Table Group B 'user_attributes_ga_group_B_base_current' May 17 - today mWeb: $v_task_status";
 
 
 v_subtask="GA current data for Table Group B 'user_attributes_ga_group_B_base_current' May 17 - today Web";
@@ -351,6 +426,45 @@ echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace 
 
 
 /home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating GA current data for Table Group C 'user_attributes_ga_group_C_base_current' May 17 - today Web: $v_task_status";
+
+
+v_subtask="GA current data for Table Group C 'user_attributes_ga_group_C_base_current' May 17 - today Web";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+
+### mWeb
+v_query="SELECT CONCAT(fullVisitorId,STRING(visitId)) AS sessionid
+       , visitStartTime AS visitStartTime
+       , 'Web' AS Platform
+       , date
+       , hits.eCommerceAction.action_type 
+       , hits.product.productSKU AS dealID
+       , hits.product.v2ProductCategory AS Category
+       , geoNetwork.city AS city
+       , channelGrouping
+
+FROM TABLE_DATE_RANGE([157529880.ga_sessions_], TIMESTAMP(DATE('2017-05-01')), TIMESTAMP(CURRENT_DATE()) )
+WHERE hits.eCommerceAction.action_type  IN  ( '2', '6')
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9";
+
+v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_C_base_current";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --append -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --append -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
 v_pid=$!
 
 
