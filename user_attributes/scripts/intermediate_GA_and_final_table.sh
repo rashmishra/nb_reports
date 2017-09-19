@@ -981,10 +981,6 @@ non_ga.customerid AS customerid
 , non_ga.PN_delivered AS PN_delivered
 , non_ga.PN_opened AS PN_opened
 , non_ga.PN_failed AS PN_failed
-, non_ga.inApp_scheduled AS inApp_scheduled
-, non_ga.inApp_delivered AS inApp_delivered
-, non_ga.inApp_opened AS inApp_opened
-, non_ga.inApp_failed AS inApp_failed
 , non_ga.email_sent AS email_sent
 , non_ga.email_open AS email_open
 , non_ga.email_click AS email_click
