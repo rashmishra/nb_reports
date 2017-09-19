@@ -386,10 +386,7 @@ v_query="SELECT
   b.firstPurchaseDate as firstPurchaseDate,
   b.lastPurchaseDate as lastPurchaseDate,
   b.totalTxn as totalTxn,
-  b.distinctOffersBought as distinctOffersBought,
-  b.voucherperTxn as voucherperTxn,
   b.totalVouchers as totalVouchers,
-  b.txnFrequency as txnFrequency,
   b.percDiscountAffinty as percDiscountAffinty
 FROM
 (SELECT 
@@ -410,11 +407,8 @@ LEFT JOIN
   DATE(MIN(PurchaseDate)) AS firstPurchaseDate,
   DATE(MAX(PurchaseDate)) AS lastPurchaseDate,
   COUNT(UNIQUE(x.orderid)) as totalTxn,
-  COUNT(UNIQUE(offerid)) AS distinctOffersBought,
   COUNT(offerid) as offersBought,
-  ROUND(COUNT(orderlineid)/COUNT(DISTINCT(x.orderid)),2) AS voucherperTxn,
   COUNT(orderlineid) AS totalVouchers,
-  ROUND(COUNT(UNIQUE(x.orderId))/(DATEDIFF(MAX(PurchaseDate),MIN(PurchaseDate))+1),2) AS txnFrequency,
   ROUND((SUM(CASE WHEN z.promocode is not null THEN 1 ELSE 0 END)/COUNT(x.orderId))*100,2) AS percDiscountAffinty
 FROM
 (SELECT
@@ -1131,10 +1125,6 @@ v_query="SELECT
   b.PN_delivered as PN_delivered,
   b.PN_opened as PN_opened,
   b.PN_failed as PN_failed,
-  b.sms_scheduled as sms_scheduled,
-  b.sms_delivered as sms_delivered,
-  b.sms_clicked as sms_clicked,
-  b.sms_failed as sms_failed,
   b.inApp_scheduled as inApp_scheduled,
   b.inApp_delivered as inApp_delivered,
   b.inApp_opened as inApp_opened,
@@ -1158,10 +1148,6 @@ LEFT JOIN (SELECT  userid as customerid,
                   COUNT(case when lifecyclestatus=40 and communicationMedium=2 then 1 end ) as PN_delivered,
                   COUNT(case when lifecyclestatus=60 and communicationMedium=2 then 1 end ) as PN_opened,
                   COUNT(case when lifecyclestatus=80 and communicationMedium=2 then 1 end ) as PN_failed,
-                  COUNT(case when lifecyclestatus=10 and communicationMedium=3 then 1 end ) as sms_scheduled,
-                  COUNT(case when lifecyclestatus=40 and communicationMedium=3 then 1 end ) as sms_delivered,
-                  COUNT(case when lifecyclestatus=70 and communicationMedium=3 then 1 end ) as sms_clicked,
-                  COUNT(case when lifecyclestatus=80 and communicationMedium=3 then 1 end ) as sms_failed,
                   COUNT(case when lifecyclestatus=10 and communicationMedium=4 then 1 end ) as inApp_scheduled,
                   COUNT(case when lifecyclestatus=40 and communicationMedium=4 then 1 end ) as inApp_delivered,
                   COUNT(case when lifecyclestatus=60 and communicationMedium=4 then 1 end ) as inApp_opened,
@@ -1219,19 +1205,9 @@ v_query="Select x.customerid as customerid,
         p.favbrunchdeal as favbrunchdeal,
         x.desserts as desserts,
         r.favdessertdeal as favdessertdeal,
-        x.nonVeg_veg as nonVeg_Veg,
-        q.favnonVeg_vegdeal as favnonVeg_vegdeal,
-        x.alcoholic as alcoholic,
-        s.favalcoholicdeal as favalcoholicdeal,
-        x.unlimitedDeals as unlimitedDeals,
-        u.favunlimiteddeal as favunlimiteddeal,
-        x.withkids as withkids,
-        t.favwithkidsdeal as favwithkidsdeal,
         breakfast,
         lunch,
-        dinner,
-        italianCuisine,
-        southIndianCuisine
+        dinner
 from (SELECT
       customerid as customerid,
       if(sum(buffet)>0,'Eats Buffet','No Buffet orders') as buffet,
@@ -1239,13 +1215,7 @@ from (SELECT
       if(sum(lunch)>0,'Lunch','No Lunch') as lunch,
       if(sum(dinner)>0,'Dinner','No Dinner') as dinner,
       if(sum(brunch)>0,'Brunch','No Brunch') as brunch,
-      if(sum(nonveg)>0,'Non-Veg',if(sum(veg)>0   AND sum(nonveg)=0,'Veg','Can\'t Say')) as nonVeg_Veg,
-      if(sum(alcoholic)>0,'Drinks Alcohol',if(sum(alcoholic)=0   AND sum(nonAlcoholicDrinks)>0,'Only Non-alcoholic drinks','No Drinks')) as alcoholic,
-      if(sum(unlimited)>0,'Unlimited deals','No Unlimited deals') as unlimitedDeals,
-      if(sum(italianCuisine)>0,'Orders Italian','No Italian Dish') as italianCuisine,
-      if(sum(southIndianCuisine)>0,'Orders South Indian dish','No South Indian Dish') as southIndianCuisine,
       if(sum(dessert)>0,'Orders Dessert','No Dessert') as desserts,
-      if(sum(withKids)>0,'Went with kids','Can\'t Say') as withKids
       FROM (SELECT 
               orderlineid,
               orderid,
@@ -1260,13 +1230,9 @@ from (SELECT
               CASE WHEN UPPER(offertitle) like ('%BRUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS brunch,
               CASE WHEN UPPER(offertitle) like ('%NON-VEG%') or UPPER(offertitle) like ('%NON VEG%') or UPPER(offertitle) like ('%CHICKEN%') THEN 1 ELSE 0 END AS nonVeg,
               CASE WHEN UPPER(offertitle) like ('%VEG%') THEN 1 ELSE 0 END AS veg,
-              CASE WHEN upper(offertitle) like ('%COCKTAIL%') or UPPER(offertitle) like ('%BEER%') or UPPER(offertitle) like ('%PITCHER%') or UPPER(offertitle) like ('%WINE%') or UPPER(offertitle) like ('%WHISKEY%') or UPPER(offertitle) like ('%IMFL%') or UPPER(offertitle) like ('%PITCHER%') or UPPER(offertitle) like ('%PINT%') or UPPER(offertitle) like ('%TEQUILA%') or UPPER(offertitle) like ('%DOMESTIC DRINKS%')  THEN 1 ELSE 0 END AS alcoholic,
               CASE WHEN upper(offertitle) like ('%MOCKTAIL%') or UPPER(offertitle) like ('%SOFT DRINKS%') or UPPER(offertitle) like ('%SOFTDRINKS%') THEN 1 ELSE 0 END AS nonAlcoholicDrinks,
               CASE WHEN upper(offertitle) like ('%UNLIMITED%') THEN 1 ELSE 0 END AS unlimited,
-              CASE WHEN upper(offertitle) like ('%PIZZA%') or upper(offertitle) like ('%PASTA%') THEN 1 ELSE 0 END AS italianCuisine,
-              CASE WHEN upper(offertitle) like ('%DOSA%') or UPPER(offertitle) like ('%IDLI%') or UPPER(offertitle) like ('%SAMBHAR%') THEN 1 ELSE 0 END AS southIndianCuisine,
               CASE WHEN upper(offertitle) like ('%DESSERT%') or UPPER(offertitle) like ('%SWEET%') THEN 1 ELSE 0 END AS dessert,
-              CASE WHEN upper(offertitle) like ('%CHILD%') or UPPER(offertitle) like ('%KID%') THEN 1 ELSE 0 END AS withKids,
             FROM Atom.order_line
             WHERE ispaid='t'
               AND finalprice>0
@@ -1363,47 +1329,6 @@ GROUP BY 1,2
 on
   (x.customerid=p.customerid
     AND  x.brunch=p.brunch)
-Left Join (SELECT
-              customerid,
-              nonVeg_Veg,
-              NTH(1,dealid) as favnonVeg_Vegdeal
-            FROM
-            (SELECT 
-              customerid,
-              CASE WHEN nonVeg=1 then 'Non-Veg'
-                   when nonVeg=0   AND Veg=1 then 'Veg' 
-                   /*when nonVeg=0   AND veg=0 then 'Can\'t Say'*/ end as nonVeg_Veg,
-              dealid,
-              COUNT(dealid) as txncount
-            FROM (SELECT  orderlineid,
-                          orderid,
-                          dealid,
-                          offerid,
-                          voucherid,
-                          offertitle,
-                          CASE WHEN UPPER(offertitle) like ('%NON-VEG%') or UPPER(offertitle) like ('%NON VEG%') or UPPER(offertitle) like ('%CHICKEN%') 
-                                  THEN 1 
-                                  ELSE 0 END AS nonVeg,
-                          CASE WHEN UPPER(offertitle) like ('%VEG%') THEN 1 ELSE 0 END AS veg,
-                  FROM Atom.order_line
-                  WHERE ispaid='t'
-                    AND finalprice>0
-                  ) as a
-
-            LEFT JOIN(SELECT  orderid,
-                              customerid as customerid
-                      FROM Atom.order_header
-                      WHERE ispaid='t'
-                        AND totalprice>0) as b
-                      ON (a.orderid=b.orderid)
-                      GROUP BY 1,3,nonVeg,veg,nonVeg_veg
-                      ORDER BY 4 desc
-              )
-            GROUP BY 1,2
-          ) as q
-on
-  (x.customerid=q.customerid
-    AND  x.nonVeg_Veg=q.nonVeg_Veg)
 
 Left Join (
 SELECT
@@ -1445,125 +1370,7 @@ on
   (x.customerid=r.customerid
     AND  x.desserts=r.dessert)
 
-Left Join (
-SELECT customerid,
-        alcoholic,
-        NTH(1,dealid) as favalcoholicdeal
-FROM (SELECT 
-        customerid,
-        CASE WHEN alcoholic=1 then 'Drinks Alcohol'
-             when alcoholic=0   AND nonalcoholicdrinks=1 then 'Only Non-alcoholic drinks'
-             /*when alcoholic=0   AND nonalcoholicdrinks=0 then 'No Drinks'*/ end as alcoholic,
-        dealid,
-        COUNT(dealid) as txncount
-      FROM (SELECT 
-              orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN upper(offertitle) like ('%COCKTAIL%') or UPPER(offertitle) like ('%BEER%') or UPPER(offertitle) like ('%PITCHER%') or UPPER(offertitle) like ('%WINE%') THEN 1 ELSE 0 END AS alcoholic,
-              CASE WHEN upper(offertitle) like ('%MOCKTAIL%') or UPPER(offertitle) like ('%SOFT DRINKS%') or UPPER(offertitle) like ('%SOFTDRINKS%') THEN 1 ELSE 0 END AS nonAlcoholicDrinks,
-            FROM Atom.order_line
-            WHERE ispaid='t'
-              AND finalprice>0
-            ) as a
-
-      LEFT JOIN (SELECT orderid,
-                        customerid as customerid
-                FROM Atom.order_header
-                WHERE ispaid='t'
-                  AND totalprice>0
-                ) as b
-      ON (a.orderid=b.orderid)
-      GROUP BY 1,3,alcoholic
-      ORDER BY 4 desc
-      )
-GROUP BY 1,2
-) as s
-on
-  (x.customerid=s.customerid
-    AND  x.alcoholic=s.alcoholic)
-
-Left Join (
-SELECT
-  customerid,
-  withKids,
-  NTH(1,dealid) as favwithKidsdeal
-FROM
-    (SELECT customerid,
-            CASE WHEN withKids=1 then 'Went with kids' END AS withKids,
-            dealid,
-            COUNT(dealid) as txncount
-    FROM (SELECT 
-            orderlineid,
-            orderid,
-            dealid,
-            offerid,
-            voucherid,
-            offertitle,
-            CASE WHEN upper(offertitle) like ('%CHILD%') or UPPER(offertitle) like ('%KID%') THEN 1 ELSE 0 END AS withKids,
-          FROM Atom.order_line
-          WHERE ispaid='t'
-            AND finalprice>0
-          ) as a
-
-    LEFT JOIN (SELECT
-                  orderid,
-                  customerid as customerid
-                FROM
-                  Atom.order_header
-                WHERE ispaid='t'
-                  AND totalprice>0) as b
-    ON  (a.orderid=b.orderid)
-    GROUP BY 1,3,withKids
-    ORDER BY 4 desc
-    )
-GROUP BY 1,2
-) as t
-on
-  (x.customerid=t.customerid
-    AND  x.withKids=t.withKids)
-
-Left Join (SELECT customerid,
-                    unlimited,
-                    NTH(1,dealid) as favunlimiteddeal
-            FROM (SELECT  customerid,
-                          CASE WHEN unlimited=1 then 'Unlimited deals'
-                               /*when unlimited=0 then 'No Unlimited deals'*/ end as unlimited,
-                          dealid,
-                          COUNT(dealid) as txncount
-                  FROM
-                  (SELECT   orderlineid,
-                            orderid,
-                            dealid,
-                            offerid,
-                            voucherid,
-                            offertitle,
-                            CASE WHEN upper(offertitle) like ('%UNLIMITED%') THEN 1 ELSE 0 END AS unlimited,
-                  FROM Atom.order_line
-                  WHERE ispaid='t'
-                    AND finalprice>0
-                  ) as a
-
-                  LEFT JOIN(SELECT
-                              orderid,
-                              customerid as customerid
-                            FROM
-                              Atom.order_header
-                            WHERE ispaid='t'
-                              AND totalprice>0) as b
-                            ON
-                              (a.orderid=b.orderid)
-                            GROUP BY 1,3,unlimited
-                            ORDER BY 4 desc
-                          )
-            GROUP BY 1,2
-) as u
-on
-  (x.customerid=u.customerid
-  AND  x.unlimitedDeals=u.unlimited)";
+";
 
 v_destination_tbl="${v_dataset_name}.user_txn_attributes";
 
@@ -1603,10 +1410,7 @@ v_query="select
   a.firstPurchaseDate as firstPurchaseDate,
   a.lastPurchaseDate as lastPurchaseDate,
   a.totalTxn as totalTxn,
-  a.distinctOffersBought as distinctOffersBought,
-  a.voucherperTxn as voucherperTxn,
   a.totalVouchers as totalVouchers,
-  a.txnFrequency as txnFrequency,
   a.percDiscountAffinty as percDiscountAffinty,
   b.buffet as buffet,
   b.favbuffetdeal as favbuffetdeal,
@@ -1614,19 +1418,10 @@ v_query="select
   b.favbrunchdeal as favbrunchdeal,
   b.desserts as desserts,
   b.favdessertdeal as favdessertdeal,
-  b.nonVeg_Veg as nonVeg_Veg,
-  b.favnonVeg_vegdeal as favnonVeg_vegdeal,
-  b.alcoholic as alcoholic,
-  b.favalcoholicdeal as favalcoholicdeal,
-  b.unlimitedDeals as unlimitedDeals,
-  b.favunlimiteddeal as favunlimiteddeal,
   b.withkids as withkids,
-  b.favwithkidsdeal as favwithkidsdeal,
   b.breakfast as breakfast,
   b.lunch as lunch,
   b.dinner as dinner,
-  b.italianCuisine as italianCuisine,
-  b.southIndianCuisine as southIndianCuisine,
   c.totalGB as totalGB,
   c.GR as totalGR,
   c.cashback AS cashback,
@@ -1668,14 +1463,9 @@ v_query="select
   i.latestRedeemCity AS latestRedeemCity,
   i.secondLatRedeemCity AS secondLatRedeemCity,
   i.thirdLatRedeemCity AS thirdLatRedeemCity,
-  (j.PN_scheduled+ j.PN_delivered+ j.PN_opened+ j.PN_failed) as PN_scheduled,
   (j.PN_delivered+ j.PN_opened) as PN_delivered,
   j.PN_opened as PN_opened,
   j.PN_failed as PN_failed,
-  ( j.sms_scheduled+ j.sms_delivered+ j.sms_clicked+ j.sms_failed ) as sms_scheduled,
-  (j.sms_delivered+ j.sms_clicked) as sms_delivered,
-  j.sms_clicked as sms_clicked,
-  j.sms_failed as sms_failed,
   (j.inApp_scheduled+ j.inApp_delivered+ j.inApp_opened + j.inApp_failed ) as inApp_scheduled,
   (j.inApp_delivered+ j.inApp_opened) as inApp_delivered,
   j.inApp_opened AS inApp_opened,
