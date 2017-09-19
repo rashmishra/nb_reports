@@ -268,8 +268,6 @@ v_query="SELECT dim.Customer_ID AS customerid
       , keys.latestSearchKeyword AS latestSearchKeyword
       , keys.secLatestSearchKeyword AS secLatestSearchKeyword
       , keys.thirdLatestSearchKeyword AS thirdLatestSearchKeyword
-      , keys.fourthLatestSearchKeyword AS fourthLatestSearchKeyword
-      , keys.fifthLatestSearchKeyword AS fifthLatestSearchKeyword
       , COALESCE(perc.percSessionsNearMe, 0.0) AS percSessionsNearMe
 FROM  (SELECT Customer_ID 
        FROM [big-query-1233:engg_reporting.user_attributes_ga_group_A_effective] 
@@ -290,8 +288,6 @@ LEFT JOIN  (SELECT customerid
                  , FIRST(IF(ranka = 1, searchKeyword, null)) AS latestSearchKeyword
                  , FIRST(IF(ranka = 2, searchKeyword, null)) AS secLatestSearchKeyword
                  , FIRST(IF(ranka = 3, searchKeyword, null)) AS thirdLatestSearchKeyword
-                 , FIRST(IF(ranka = 4, searchKeyword, null)) AS fourthLatestSearchKeyword
-                 , FIRST(IF(ranka = 5, searchKeyword, null)) AS fifthLatestSearchKeyword
           FROM (SELECT Customer_ID as customerid,
                        date as session_date,
                        upper(searchKeyword) as searchKeyword,
@@ -342,8 +338,6 @@ v_query="SELECT customerid
        , FIRST(IF(ranka = 1, searchKeyword, null)) AS mostSearchKeyword
        , FIRST(IF(ranka = 2, searchKeyword, null)) AS secMostSearchKeyword
        , FIRST(IF(ranka = 3, searchKeyword, null)) AS thirdMostSearchKeyword
-       , FIRST(IF(ranka = 4, searchKeyword, null)) AS fourthMostSearchKeyword
-       , FIRST(IF(ranka = 5, searchKeyword, null)) AS fifthMostSearchKeyword
 FROM (SELECT   Customer_ID as customerid,
                 upper(searchKeyword) as searchKeyword,
                 count(upper(searchKeyword)) as keywordCount,
@@ -761,13 +755,9 @@ v_query="select
   d.latestSearchKeyword as latestSearchKeyword,
   d.secLatestSearchKeyword as secLatestSearchKeyword,
   d.thirdLatestSearchKeyword as thirdLatestSearchKeyword,
-  d.fourthLatestSearchKeyword as fourthLatestSearchKeyword,
-  d.fifthLatestSearchKeyword as fifthLatestSearchKeyword,  
   e.mostSearchKeyword as mostSearchKeyword,
   e.secMostSearchKeyword as secMostSearchKeyword,
   e.thirdMostSearchKeyword as thirdMostSearchKeyword,
-  e.fourthMostSearchKeyword as fourthMostSearchKeyword,
-  e.fifthMostSearchKeyword as fifthMostSearchKeyword,
   f.mostBrowsedDeal as mostBrowsedDeal,
   f.secMostBrowsedDeal as secMostBrowsedDeal,
   f.thirdMostBrowsedDeal as thirdMostBrowsedDeal,
@@ -1021,13 +1011,9 @@ ga.sourceOfAcquisition_txn as sourceOfAcquisition_txn,
 ga.latestSearchKeyword as latestSearchKeyword,
 ga.secLatestSearchKeyword as secLatestSearchKeyword,
 ga.thirdLatestSearchKeyword as thirdLatestSearchKeyword,
-ga.fourthLatestSearchKeyword as fourthLatestSearchKeyword,
-ga.fifthLatestSearchKeyword as fifthLatestSearchKeyword,
 ga.mostSearchKeyword as mostSearchKeyword,
 ga.secMostSearchKeyword as secMostSearchKeyword,
 ga.thirdMostSearchKeyword as thirdMostSearchKeyword,
-ga.fourthMostSearchKeyword as fourthMostSearchKeyword,
-ga.fifthMostSearchKeyword as fifthMostSearchKeyword,
 ga.mostBrowsedDeal as mostBrowsedDeal,
 ga.secMostBrowsedDeal as secMostBrowsedDeal,
 ga.thirdMostBrowsedDeal as thirdMostBrowsedDeal,
