@@ -1125,12 +1125,8 @@ v_query="SELECT
   b.PN_delivered as PN_delivered,
   b.PN_opened as PN_opened,
   b.PN_failed as PN_failed,
-  c.email_bulkSent as email_bulkSent,
-  c.email_eventSent as email_eventSent,
-  c.email_bulkbounce as email_bulkbounce,
   c.email_open as email_open,
   c.email_click as email_click,
-  c.email_unsubscribe as email_unsubscribe
 FROM (SELECT  customerId,
               name,
               gender,
@@ -1150,12 +1146,8 @@ LEFT JOIN (SELECT  userid as customerid,
 ON a.customerid = b.customerid
 left join (SELECT
               uid,
-              count(case when Event_Type_ID=1 then 1 end) as email_bulkSent,
-              count(case when Event_Type_ID=2 then 1 end) as email_eventSent,
-              count(case when Event_Type_ID=3 then 1 end) as email_bulkbounce,
               count(case when Event_Type_ID=10 then 1 end) as email_open,
               count(case when Event_Type_ID=20 then 1 end) as email_click,
-              count(case when Event_Type_ID=50 then 1 end) as email_unsubscribe
             FROM (TABLE_DATE_RANGE([big-query-1233:cheetah.cheetah_], TIMESTAMP(DATE_ADD(TIMESTAMP(CURRENT_DATE()),-365,'DAY')), TIMESTAMP(CURRENT_DATE())))
             GROUP BY 1
             ) as c
@@ -1461,7 +1453,6 @@ v_query="select
   ( j.email_eventSent + j.email_open+ j.email_click ) as email_sent,
   (j.email_open+ j.email_click) as email_open,
   j.email_click AS email_click,
-  j.email_unsubscribe AS email_unsubscribe,
   
   l.mostVisitedPlace AS mostVisitedPlace,
   l.mostVisitedPlaceCity AS mostVisitedPlaceCity,

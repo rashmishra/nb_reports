@@ -100,13 +100,6 @@ v_query="SELECT
     when Sum(case when source='Web' then 1 else 0 end)/count(source) >=0.7 then 'Web'
     when count(source) is null or count(source)=0 then null
     else 'Cross-Platfrom' end as platformAffinity,
-  sum(case when dayofweek(date( session_date ))=2 then 1 else 0 end) as mondaySessions,
-  sum(case when dayofweek(date( session_date ))=3 then 1 else 0 end) as tuesdaySessions,
-  sum(case when dayofweek(date( session_date ))=4 then 1 else 0 end) as wednesdaySessions,
-  sum(case when dayofweek(date( session_date ))=5 then 1 else 0 end) as thursdaySessions,
-  sum(case when dayofweek(date( session_date ))=6 then 1 else 0 end) as fridaySessions,
-  sum(case when dayofweek(date( session_date ))=7 then 1 else 0 end) as saturdaySessions,
-  sum(case when dayofweek(date( session_date ))=1 then 1 else 0 end) as sundaySessions,
   sum(case when hour(sec_to_timestamp( session_start_time )) in (0,1,2) then 1 else 0 end) as AM_0_3,
   sum(case when hour(sec_to_timestamp( session_start_time )) in (3,4,5) then 1 else 0 end) as AM_3_6,
   sum(case when hour(sec_to_timestamp( session_start_time )) in (6,7,8) then 1 else 0 end) as AM_6_9,
@@ -148,10 +141,6 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 v_query="select
 Customer_ID,
-Sum(case when deviceBrowser='Chrome' then 1 else 0 end) as chromeSessions,
-Sum(case when deviceBrowser='Firefox' then 1 else 0 end) as firefoxSessions,
-Sum(case when deviceBrowser='Safari' then 1 else 0 end) as safariSessions,
-Sum(case when deviceBrowser='Internet Explorer' then 1 else 0 end) as ieSessions,
 Sum(case when userConnection='2G' then 1 else 0 end ) as twoG,
 Sum(case when userConnection='3G' then 1 else 0 end ) as threeG,
 Sum(case when userConnection='4G' then 1 else 0 end ) as fourG,
@@ -749,13 +738,6 @@ v_query="select
   a.activeDays as activeDays,
   a.sessionsPerActiveDay as sessionsPerActiveDay,
   a.platformAffinity as platformAffinity,
-  a.mondaySessions as mondaySessions, 
-  a.tuesdaySessions as tuesdaySessions,
-  a.wednesdaySessions as wednesdaySessions,
-  a.thursdaySessions as thursdaySessions,
-  a.fridaySessions as fridaySessions,
-  a.saturdaySessions as saturdaySessions,
-  a.sundaySessions as sundaySessions,
   a.AM_0_3 as AM_0_3,
   a.AM_3_6 as AM_3_6,
   a.AM_6_9 as AM_6_9,
@@ -764,10 +746,6 @@ v_query="select
   a.PM_3_6 as PM_3_6,
   a.PM_6_9 as PM_6_9,
   a.PM_9_12 as PM_9_12,
-  b.chromeSessions as chromeSessions,
-  b.firefoxSessions as firefoxSessions,
-  b.safariSessions as safariSessions, 
-  b.ieSessions as ieSessions,
   b.twoG as twoG,
   b.threeG as threeG,
   b.fourG as fourG,
@@ -984,7 +962,6 @@ non_ga.customerid AS customerid
 , non_ga.email_sent AS email_sent
 , non_ga.email_open AS email_open
 , non_ga.email_click AS email_click
-, non_ga.email_unsubscribe AS email_unsubscribe
 
 , non_ga.mostVisitedPlace AS mostVisitedPlace
 , non_ga.mostVisitedPlaceCity AS mostVisitedPlaceCity
@@ -1021,13 +998,6 @@ ga.latestSessionDate as latestSessionDate,
 ga.activeDays as activeDays,
 ga.sessionsPerActiveDay as sessionsPerActiveDay,
 ga.platformAffinity as platformAffinity,
-ga.mondaySessions as mondaySessions,
-ga.tuesdaySessions as tuesdaySessions,
-ga.wednesdaySessions as wednesdaySessions,
-ga.thursdaySessions as thursdaySessions,
-ga.fridaySessions as fridaySessions,
-ga.saturdaySessions as saturdaySessions,
-ga.sundaySessions as sundaySessions,
 ga.AM_0_3 as AM_0_3,
 ga.AM_3_6 as AM_3_6,
 ga.AM_6_9 as AM_6_9,
@@ -1035,11 +1005,7 @@ ga.AM_9_12 as AM_9_12,
 ga.PM_12_3 as PM_12_3,
 ga.PM_3_6 as PM_3_6,
 ga.PM_6_9 as PM_6_9,
-ga.PM_9_12 as PM_9_12,
-ga.chromeSessions as chromeSessions,
-ga.firefoxSessions as firefoxSessions,
-ga.safariSessions as safariSessions,
-ga.ieSessions as ieSessions,
+ga.PM_9_12 as PM_9_12
 ga.twoG as twoG,
 ga.threeG as threeG,
 ga.fourG as fourG,
