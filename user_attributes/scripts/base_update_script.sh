@@ -48,9 +48,9 @@ v_dataset_name="engg_reporting";
 
 
 ## Table 1: latest_three_txn
-									# Category (Transaction)
-									# Primary SKU (Transaction)
-									# Price point (Transaction)
+                                    # Category (Transaction)
+                                    # Primary SKU (Transaction)
+                                    # Price point (Transaction)
 
 v_query="SELECT  customerId,
         NTH(1,dealId) AS latestDealTxn,
@@ -1179,7 +1179,63 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Completed Table 14: engagement_behaviour
 
 
-## Table 15: user_txn_attributes
+## Table 15 (a): dining_preferences
+v_query="SELECT customerid
+        , a.orderid AS orderid
+        , dealid
+        , dessert
+        , brunch
+        , buffet
+        , breakfast
+        , lunch
+        , dinner
+FROM (SELECT orderid,
+        dealid,
+        CASE WHEN upper(offertitle) like ('%DESSERT%') or UPPER(offertitle) like ('%SWEET%') THEN 1 ELSE 0 END AS dessert,
+        CASE WHEN UPPER(offertitle) like ('%BRUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS brunch,
+        CASE WHEN UPPER(offertitle) like ('%BUFFET%') THEN 1 ELSE 0 END AS buffet,
+        CASE WHEN UPPER(offertitle) like ('%BREAKFAST%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS breakfast,
+        CASE WHEN UPPER(offertitle) like ('%LUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS lunch,
+        CASE WHEN UPPER(offertitle) like ('%DINNER%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS dinner
+      FROM Atom.order_line
+      WHERE ispaid='t'
+        AND finalprice>0
+      GROUP BY orderid, dealid, dessert, brunch, buffet, breakfast, lunch, dinner
+      ) as a
+LEFT JOIN(SELECT  orderid,
+                  customerid as customerid
+          FROM Atom.order_header
+          WHERE ispaid='t'
+            AND totalprice>0
+         ) as b
+    ON (a.orderid=b.orderid)";
+
+v_destination_tbl="${v_dataset_name}.dining_preferences";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating user_txn_attributes: $v_task_status";
+
+
+v_subtask="User Attributes Step 15: user_txn_attributes creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 15 (a): dining_preferences
+
+## Table 15 (b): user_txn_attributes
 
 
 v_query="Select x.customerid as customerid,
@@ -1192,169 +1248,61 @@ v_query="Select x.customerid as customerid,
         breakfast,
         lunch,
         dinner
-from (SELECT
-      customerid as customerid,
-      if(sum(buffet)>0,'Eats Buffet','No Buffet orders') as buffet,
-      if(sum(breakfast)>0,'Breakfast','No Breakfast') as breakfast,
-      if(sum(lunch)>0,'Lunch','No Lunch') as lunch,
-      if(sum(dinner)>0,'Dinner','No Dinner') as dinner,
-      if(sum(brunch)>0,'Brunch','No Brunch') as brunch,
-      if(sum(dessert)>0,'Orders Dessert','No Dessert') as desserts,
-      FROM (SELECT 
-              orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN UPPER(offertitle) like ('%BUFFET%') THEN 1 ELSE 0 END AS buffet,
-              CASE WHEN UPPER(offertitle) like ('%BREAKFAST%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS breakfast,
-              CASE WHEN UPPER(offertitle) like ('%LUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS lunch,
-              CASE WHEN UPPER(offertitle) like ('%DINNER%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS dinner,
-              CASE WHEN UPPER(offertitle) like ('%BRUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS brunch,
-              CASE WHEN UPPER(offertitle) like ('%NON-VEG%') or UPPER(offertitle) like ('%NON VEG%') or UPPER(offertitle) like ('%CHICKEN%') THEN 1 ELSE 0 END AS nonVeg,
-              CASE WHEN UPPER(offertitle) like ('%VEG%') THEN 1 ELSE 0 END AS veg,
-              CASE WHEN upper(offertitle) like ('%MOCKTAIL%') or UPPER(offertitle) like ('%SOFT DRINKS%') or UPPER(offertitle) like ('%SOFTDRINKS%') THEN 1 ELSE 0 END AS nonAlcoholicDrinks,
-              CASE WHEN upper(offertitle) like ('%UNLIMITED%') THEN 1 ELSE 0 END AS unlimited,
-              CASE WHEN upper(offertitle) like ('%DESSERT%') or UPPER(offertitle) like ('%SWEET%') THEN 1 ELSE 0 END AS dessert,
-            FROM Atom.order_line
-            WHERE ispaid='t'
-              AND finalprice>0
-            ) as a
-
-      LEFT JOIN(
-      SELECT
-        orderid,
-        customerid as customerid
-      FROM
-        Atom.order_header
-      WHERE ispaid='t'
-        AND totalprice>0) as b
-      ON
-        (a.orderid=b.orderid)
-      WHERE length(customerid)>5
-      GROUP BY 1
-      ) as x
-  
-Left Join (
-SELECT
-  customerid,
-  buffet,
-  NTH(1,dealid) as favbuffetdeal
-FROM (SELECT 
-        customerid,
-        CASE WHEN buffet=1 THEN 'Eats Buffet' END AS buffet,
-        dealid,
-        COUNT(dealid) as txncount
-      FROM (SELECT 
-              orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN UPPER(offertitle) like ('%BUFFET%') THEN 1 ELSE 0 END AS buffet,
-            FROM Atom.order_line
-            WHERE ispaid='t'
-              AND finalprice>0
-            ) as a
-
-      LEFT JOIN  (SELECT orderid,
-                         customerid as customerid
-                FROM Atom.order_header
-                WHERE ispaid='t'
-                  AND totalprice>0
-                  ) as b
-      ON (a.orderid=b.orderid)
-      GROUP BY 1, 3, buffet
-      ORDER BY 4 desc
-      )
-GROUP BY 1,2
-) as z
-on (x.customerid=z.customerid
-    AND  x.buffet=z.buffet)
-  
-Left Join (
-SELECT
-  customerid,
-  brunch,
-  NTH(1,dealid) as favbrunchdeal
-FROM
-(SELECT 
-  customerid,
-  CASE WHEN brunch=1 then 'Brunch'
-       end as brunch,
-  dealid,
-  COUNT(dealid) as txncount
-FROM (SELECT  orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN UPPER(offertitle) like ('%BRUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS brunch,
-    FROM Atom.order_line
-    WHERE ispaid='t'
-      AND finalprice>0
-    ) as a
-
-LEFT JOIN (SELECT orderid,
-                  customerid as customerid
-          FROM Atom.order_header
-          WHERE ispaid='t'
-            AND totalprice>0
-          ) as b
-ON (a.orderid=b.orderid)
-GROUP BY 1, 3, brunch
-ORDER BY 4 desc
-)
-GROUP BY 1,2
-) as p
-on
-  (x.customerid=p.customerid
-    AND  x.brunch=p.brunch)
-
-Left Join (
-SELECT
-  customerid,
-  dessert,
-  NTH(1,dealid) as favdessertdeal
-FROM (SELECT 
-        customerid,
-        CASE WHEN dessert=1 then 'Orders Dessert'
-             /*when dessert=0 then 'No Dessert'*/ end as dessert,
-        dealid,
-        COUNT(dealid) as txncount
-      FROM (SELECT 
-              orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN upper(offertitle) like ('%DESSERT%') or UPPER(offertitle) like ('%SWEET%') THEN 1 ELSE 0 END AS dessert,
-            FROM Atom.order_line
-            WHERE ispaid='t'
-              AND finalprice>0
-            ) as a
-
-      LEFT JOIN(SELECT  orderid,
-                        customerid as customerid
-                FROM Atom.order_header
-                WHERE ispaid='t'
-                  AND totalprice>0
-               ) as b
-      ON (a.orderid=b.orderid)
-      GROUP BY 1,3,dessert
-      ORDER BY 4 desc
-      )
-GROUP BY 1,2
-) as r
-on
-  (x.customerid=r.customerid
-    AND  x.desserts=r.dessert)
-
-";
+FROM (SELECT  customerid as customerid,
+              if(sum(buffet)>0, 1, 0) as buffet,
+              if(sum(breakfast)>0,  1, 0) as breakfast,
+              if(sum(lunch)>0, 1, 0) as lunch,
+              if(sum(dinner)>0,  1, 0) as dinner,
+              if(sum(brunch)>0, 1, 0) as brunch,
+              if(sum(dessert)>0, 1, 0) as desserts
+      FROM ${v_dataset_name}.dining_preferences
+      GROUP BY customerid
+      ) x
+LEFT JOIN (SELECT customerid,
+                  buffet,
+                  NTH(1,dealid) as favbuffetdeal
+            FROM (SELECT  customerid,
+                          buffet,
+                          dealid,
+                          EXACT_COUNT_DISTINCT(orderid) as txncount
+                  FROM ${v_dataset_name}.dining_preferences  
+                  WHERE buffet=1
+                  GROUP BY customerid, dealid, buffet
+                  ORDER BY txncount desc
+                  ) buf
+            GROUP BY 1,2
+            ) as z
+    ON (x.customerid=z.customerid)
+LEFT JOIN (SELECT customerid,
+                  brunch,
+                  NTH(1,dealid) as favbrunchdeal
+            FROM (SELECT  customerid,
+                          brunch,
+                          dealid,
+                          EXACT_COUNT_DISTINCT(orderid) as txncount
+                        FROM ${v_dataset_name}.dining_preferences  
+                        WHERE brunch=1
+                        GROUP BY customerid, dealid, brunch
+                        ORDER BY txncount desc
+                        ) brn
+            GROUP BY 1,2
+            ) as p
+ON (x.customerid=p.customerid)
+LEFT JOIN (SELECT customerid,
+                  dessert,
+                  NTH(1,dealid) as favdessertdeal
+            FROM (SELECT  customerid,
+                          dessert,
+                          dealid,
+                          EXACT_COUNT_DISTINCT(orderid) as txncount
+                  FROM ${v_dataset_name}.dining_preferences  
+                  WHERE dessert=1
+                  GROUP BY customerid, dealid, dessert
+                  ORDER BY txncount desc
+                  ) des
+            GROUP BY 1,2
+            ) as r
+ON (x.customerid=r.customerid)";
 
 v_destination_tbl="${v_dataset_name}.user_txn_attributes";
 
@@ -1379,7 +1327,7 @@ echo `date` "Creating user_txn_attributes: $v_task_status";
 v_subtask="User Attributes Step 15: user_txn_attributes creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 15: user_txn_attributes
+## Completed Table 15 (b): user_txn_attributes
 
 
 
@@ -1396,16 +1344,15 @@ v_query="select
   a.totalTxn as totalTxn,
   a.totalVouchers as totalVouchers,
   a.percDiscountAffinty as percDiscountAffinty,
-  b.buffet as buffet,
+  b.buffet as isBuffet,
   b.favbuffetdeal as favbuffetdeal,
-  b.brunch as brunch,
+  b.brunch as isBrunch,
   b.favbrunchdeal as favbrunchdeal,
-  b.desserts as desserts,
+  b.desserts as isDesserts,
   b.favdessertdeal as favdessertdeal,
-  b.withkids as withkids,
-  b.breakfast as breakfast,
-  b.lunch as lunch,
-  b.dinner as dinner,
+  b.breakfast as isBreakfast,
+  b.lunch as isLunch,
+  b.dinner as isDinner,
   c.totalGB as totalGB,
   c.GR as totalGR,
   c.cashback AS cashback,
