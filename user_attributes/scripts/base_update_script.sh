@@ -373,77 +373,82 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ## Completed Table 5: txn_valid_for
 
+
 ## Table 6: txn_summary
 
-
-v_query="SELECT
-  a.customerid as customerid,
-  a.name as name,
-  a.gender as gender,
-  a.dob.day as dob_day,
-  a.dob.month as dob_month,
-  a.dob.year as dob_year,
-  b.firstPurchaseDate as firstPurchaseDate,
-  b.lastPurchaseDate as lastPurchaseDate,
-  b.totalTxn as totalTxn,
-  b.totalVouchers as totalVouchers,
-  b.percDiscountAffinty as percDiscountAffinty
-FROM
-(SELECT 
-  customerId,
-  name,
-  gender,
-  dob.day,
-  dob.month,
-  dob.year
-FROM
-  [big-query-1233:Atom.customer]
-WHERE 
-  isValidated=true) as a
-  
-LEFT JOIN
-(SELECT 
-  z.customerId as customerId,
-  DATE(MIN(PurchaseDate)) AS firstPurchaseDate,
-  DATE(MAX(PurchaseDate)) AS lastPurchaseDate,
-  COUNT(UNIQUE(x.orderid)) as totalTxn,
-  COUNT(offerid) as offersBought,
-  COUNT(orderlineid) AS totalVouchers,
-  ROUND((SUM(CASE WHEN z.promocode is not null THEN 1 ELSE 0 END)/COUNT(x.orderId))*100,2) AS percDiscountAffinty
-FROM
-(SELECT
-  orderlineid,
-  orderid,
-  dealid,
-  offerid,
-  voucherid,
-  MSEC_TO_TIMESTAMP(redemptiondate+19800000 ) AS redeemDate,
-  MSEC_TO_TIMESTAMP(createdat+19800000 ) AS PurchaseDate
-FROM [big-query-1233:Atom.order_line]
-WHERE ispaid='t'
-AND finalprice >0
-AND dealid<> '14324'
-AND dealid NOT IN (select STRING(deal_id) from dbdev.dtr_deals_live)
-GROUP BY 1,2,3,4,5,6,7
-) AS x
-
-LEFT JOIN ( SELECT  orderid,
-  promocode,
-  customerid
-FROM [big-query-1233:Atom.order_header]
-WHERE ispaid='t'
-AND totalprice>0
-GROUP BY
-1,2,3) AS z
-ON
-  (x.orderid = z.orderid)
-WHERE LENGTH(z.customerId)>5 
-AND  x.dealid<> '14324'
-AND x.dealid NOT IN (select STRING(deal_id) from dbdev.dtr_deals_live)
-GROUP BY
-1) as b
-ON (a.customerId=b.customerId)
-";
+v_query="SELECT  a.customerid AS customerid
+        , a.name AS name
+        , a.gender AS gender
+        , a.dob.day AS dob_day
+        , a.dob.month AS dob_month
+        , a.dob.year AS dob_year
+        , b.raffleFirstPurchaseDate AS raffleFirstPurchaseDate
+        , b.nonRaffleFirstPurchaseDate AS nonRaffleFirstPurchaseDate
+        , b.nonRaffleLastPurchaseDate AS nonRaffleLastPurchaseDate
+        , b.raffleLastPurchaseDate AS raffleLastPurchaseDate
+        , b.totalNonRaffleTxn AS totalNonRaffleTxn
+        , b.totalRaffleTxn AS totalRaffleTxn
+        , b.totalNonRaffleVouchers AS totalNonRaffleVouchers
+        , b.totalRaffleVouchers AS totalRaffleVouchers
+        , b.percDiscountAffinty AS percDiscountAffinty
+FROM (SELECT customerId
+             , name
+             , gender
+             , dob.day
+             , dob.month
+             , dob.year
+    FROM [big-query-1233:Atom.customer]
+    WHERE isValidated=true
+    ) AS a
+LEFT JOIN (SELECT z.customerId AS customerId,
+                  DATE(MIN(nonRafflePurchaseDate)) AS nonRaffleFirstPurchaseDate,
+                  DATE(MAX(nonRafflePurchaseDate)) AS nonRaffleLastPurchaseDate,
+                  DATE(MIN(rafflePurchaseDate)) AS raffleFirstPurchaseDate,
+                  DATE(MAX(rafflePurchaseDate)) AS raffleLastPurchaseDate,
+                  COUNT(UNIQUE(nonRaffleOrderId)) AS totalNonRaffleTxn,
+                  COUNT(UNIQUE(raffleOrderId)) AS totalRaffleTxn,
+                  COUNT(nonRaffleOfferId) AS nonRaffleoffersBought,
+                  COUNT(raffleOfferId) AS raffleOffersBought,
+                  COUNT(nonRaffleOrderlineId) AS totalNonRaffleVouchers,
+                  COUNT(raffleOrderlineId) AS totalRaffleVouchers,
+                  ROUND((SUM(CASE WHEN z.promocode IS NOT NULL
+                                 THEN 1 
+                               ELSE 0 
+                             END)/COUNT(nonRaffleOrderId))*100
+                         ,2) AS percDiscountAffinty
+          FROM (SELECT orderlineid
+                      , orderid
+                      , dealid
+                      , voucherid
+                      , CASE WHEN finalprice > 0 THEN MSEC_TO_TIMESTAMP(redemptiondate + 19800000 ) ELSE NULL END AS nonRaffleRedeemDate
+                      , CASE WHEN finalprice = 0 THEN MSEC_TO_TIMESTAMP(redemptiondate + 19800000 ) ELSE NULL END AS raffleRedeemDate
+                      , CASE WHEN finalprice > 0 THEN MSEC_TO_TIMESTAMP(createdat + 19800000 ) ELSE NULL END AS nonRafflePurchaseDate
+                      , CASE WHEN finalprice = 0 THEN MSEC_TO_TIMESTAMP(createdat + 19800000 ) ELSE NULL END AS rafflePurchaseDate
+                      , CASE WHEN finalprice = 0 THEN offerid ELSE NULL END AS raffleOfferId
+                      , CASE WHEN finalprice > 0 THEN offerid ELSE NULL END AS nonRaffleOfferId
+                      , CASE WHEN finalprice = 0 THEN orderlineid ELSE NULL END AS raffleOrderlineId
+                      , CASE WHEN finalprice > 0 THEN orderlineid ELSE NULL END AS nonRaffleOrderlineId
+              FROM [big-query-1233:Atom.order_line]
+              WHERE ispaid = 't'
+              GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+              ) AS x
+          LEFT JOIN (SELECT orderid
+                            , promocode
+                            , customerid
+                            , CASE WHEN totalprice = 0 THEN orderid ELSE NULL END AS raffleOrderId
+                            , CASE WHEN totalprice > 0 THEN orderid ELSE NULL END AS nonRaffleOrderId
+                      FROM [big-query-1233:Atom.order_header]
+                      WHERE ispaid='t'
+                      GROUP BY 1, 2, 3, 4, 5
+                    ) AS z
+              ON (x.orderid = z.orderid)
+          WHERE LENGTH(z.customerId)>5 
+            AND x.dealid<> '14324'
+            AND x.dealid NOT IN (SELECT STRING(deal_id) 
+                                   FROM dbdev.dtr_deals_live)
+          GROUP BY 1
+          ) AS b
+    ON (a.customerId=b.customerId)";
 v_destination_tbl="${v_dataset_name}.txn_summary";
 
 echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
@@ -1330,10 +1335,14 @@ v_query="select
   a.dob_day as dob_day,
   a.dob_month as dob_month,
   a.dob_year as dob_year,
-  a.firstPurchaseDate as firstPurchaseDate,
-  a.lastPurchaseDate as lastPurchaseDate,
-  a.totalTxn as totalTxn,
-  a.totalVouchers as totalVouchers,
+  a.raffleFirstPurchaseDate AS raffleFirstPurchaseDate,
+  a.nonRaffleFirstPurchaseDate AS nonRaffleFirstPurchaseDate,
+  a.raffleLastPurchaseDate AS raffleLastPurchaseDate,
+  a.nonRaffleLastPurchaseDate AS nonRaffleLastPurchaseDate,
+  a.totalNonRaffleTxn AS totalNonRaffleTxn, 
+  a.totalRaffleTxn AS totalRaffleTxn, 
+  a.totalNonRaffleVouchers AS totalNonRaffleVouchers, 
+  a.totalRaffleVouchers AS totalRaffleVouchers,
   a.percDiscountAffinty as percDiscountAffinty,
   b.buffet as isBuffet,
   b.favbuffetdeal as favbuffetdeal,
