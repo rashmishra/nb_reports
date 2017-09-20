@@ -1031,18 +1031,25 @@ FROM (SELECT   customerid ,
                 NTH(3, hotspot) AS thirdMostVisitedPlace,
                 NTH(3, hotspotCity) AS thirdMostVisitedPlaceCity,
                 NTH(3, visits) AS times3
-      FROM (SELECT ul.customerId as customerid, mms.name as hotspot
-                    , mms.city as hotspotCity
-                    , count(hotspotEntered) as visits
-            FROM cerebro.user_location as ul
-            join Atom.mall_market_street as mms on ul.hotspotEntered = mms._id
-            where ul.hotspotEntered is not null AND ul.distanceFromHotspot < 25
-            GROUP BY 1,2,3
-      order by visits desc
+      FROM (SELECT customerid
+                   , hotspot
+                   , hotspotCity
+                   , COUNT(hotspotEntered) AS visits
+            FROM (SELECT ul.customerId as customerid
+                         , mms.name as hotspot
+                         , mms.city as hotspotCity
+                         , DATE(MSEC_TO_TIMESTAMP(ul.time + 19800000)) AS date_entered
+                         , hotspotEntered
+                    FROM cerebro.user_location as ul
+                    INNER JOIN Atom.mall_market_street as mms on ul.hotspotEntered = mms._id
+                    WHERE ul.hotspotEntered is not null AND ul.distanceFromHotspot < 25
+                    GROUP BY 1, 2, 3, 4, 5
+            )
+            GROUP BY 1, 2, 3
+      ORDER BY visits DESC
             )
       GROUP BY 1
 ) as x
-
 LEFT JOIN [engg_reporting.mall_market_street_info] as m1
 on (x.mostVisitedPlace=m1.mallName
   AND x.mostVisitedPlaceCity=m1.cityName)
