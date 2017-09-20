@@ -625,36 +625,20 @@ v_query="select
   a.customerid as customerid,
   weekendPurchase,
   weekdayPurchase,
-  weekendPurchase_weekendRedeem,
-  weekendPurchase_weekdayRedeem,
-  weekdayPurchase_weekendRedeem,
-  weekdayPurchase_weekdayRedeem,
   unredeemedVouchers,
-  ROUND(b.redeemtimediff_mintues, 3) as redeemtimediff_mintues
+  ROUND(b.redeemtimediff_hours, 1) as redeemtimediff_hours
 from
 (SELECT
   customerid,
   SUM(weekendPurchase) AS weekendPurchase,
   SUM(weekdayPurchase) AS weekdayPurchase,
-  SUM(weekendPurchase_weekendRedeem) AS weekendPurchase_weekendRedeem,
-  SUM(weekendPurchase_weekdayRedeem) AS weekendPurchase_weekdayRedeem,
-  SUM(weekdayPurchase_weekendRedeem) AS weekdayPurchase_weekendRedeem,
-  SUM(weekdayPurchase_weekdayRedeem) AS weekdayPurchase_weekdayRedeem,
   SUM(unredeemedVouchers) AS unredeemedVouchers,
---  AVG(redeemtimediff) AS redeemtimediff_mintues,
---  AVG(distanceinkm) AS redeemDistance
 FROM
 (SELECT 
   c.customerId as customerId,
-  CASE WHEN DAYOFWEEK(createDate) in (1,7) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekendPurchase,
-  CASE WHEN DAYOFWEEK(createDate) in (2,3,4,5,6) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekdayPurchase,
-  CASE WHEN DAYOFWEEK(createDate) in (1,7) AND DAYOFWEEK(redeemdate) in (1,7) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekendPurchase_weekendRedeem,
-  CASE WHEN DAYOFWEEK(createDate) in (1,7) AND DAYOFWEEK(redeemdate) in (2,3,4,5,6) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekendPurchase_weekdayRedeem,
-  CASE WHEN DAYOFWEEK(createDate) in (2,3,4,5,6) AND DAYOFWEEK(redeemdate) in (1,7) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekdayPurchase_weekendRedeem,
-  CASE WHEN DAYOFWEEK(createDate) in (2,3,4,5,6) AND DAYOFWEEK(redeemdate) in (2,3,4,5,6) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekdayPurchase_weekdayRedeem,
-  SUM(CASE WHEN redeemdate is null THEN 1 ELSE 0 END) AS unredeemedVouchers,
---  FLOOR((redeemdate - createdate)/1000000/60) AS redeemtimediff,
---  ROUND((SQRT(((69.1 * (redemptionlat - buyinglat)) * (69.1 * (redemptionlat - buyinglat)))+ ((69.1 * (redemptionlong - buyinglong) * COS(buyinglat / 57.3)) * (69.1 * (redemptionlong - buyinglong) * COS(buyinglat / 57.3)))) * 1.60934),2) AS distanceinkm
+  CASE WHEN DAYOFWEEK(createDate) in (1,6,7) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekendPurchase,
+  CASE WHEN DAYOFWEEK(createDate) in (2,3,4,5) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekdayPurchase,
+  SUM(CASE WHEN redeemdate is null THEN 1 ELSE 0 END) AS unredeemedVouchers
 FROM
 (SELECT
   orderid,
@@ -691,7 +675,7 @@ GROUP BY
 left join (
 select
   customerid,
-  avg(FLOOR((redeemdate - createdate)/1000000/60)) as redeemtimediff_mintues
+  AVG(FLOOR((redeemdate - createdate)/1000000/60)/60) as redeemtimediff_hours
 from
 (SELECT
   orderid,
@@ -1360,12 +1344,8 @@ v_query="select
   c.GR_afterCB as GR_afterFirstCB,
   d.weekendPurchase as weekendPurchase,
   d.weekdayPurchase as weekdayPurchase,
-  d.weekendPurchase_weekendRedeem as weekendPurchase_weekendRedeem,
-  d.weekendPurchase_weekdayRedeem as weekendPurchase_weekdayRedeem,
-  d.weekdayPurchase_weekendRedeem as weekdayPurchase_weekendRedeem,
-  d.weekdayPurchase_weekdayRedeem as weekdayPurchase_weekdayRedeem,
   d.unredeemedVouchers as unredeemedVouchers,
-  d.redeemtimediff_mintues as redeemtimediff_mintues,
+  d.redeemtimediff_hours as redeemtimediff_hours,
   e.cancellations AS cancellations,
   e.redeemed as redeemed,
   e.refunds as refunds,

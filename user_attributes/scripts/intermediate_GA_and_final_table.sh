@@ -912,12 +912,8 @@ non_ga.customerid AS customerid
 , non_ga.GR_afterFirstCB AS GR_afterFirstCB
 , non_ga.weekendPurchase AS weekendPurchase
 , non_ga.weekdayPurchase AS weekdayPurchase
-, non_ga.weekendPurchase_weekendRedeem AS weekendPurchase_weekendRedeem
-, non_ga.weekendPurchase_weekdayRedeem AS weekendPurchase_weekdayRedeem
-, non_ga.weekdayPurchase_weekendRedeem AS weekdayPurchase_weekendRedeem
-, non_ga.weekdayPurchase_weekdayRedeem AS weekdayPurchase_weekdayRedeem
 , non_ga.unredeemedVouchers AS unredeemedVouchers
-, non_ga.redeemtimediff_mintues AS redeemtimediff_mintues
+, non_ga.redeemtimediff_hours AS redeemtimediff_hours
 , non_ga.cancellations AS cancellations
 , non_ga.redeemed AS redeemed
 , non_ga.refunds AS refunds
