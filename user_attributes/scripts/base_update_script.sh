@@ -254,16 +254,11 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Completed Table 2: most_txn_category
 
 
-## Table 3: most_txns_deal
+## Table 3 (a): most_txns_merchant_base
 
 
-v_query="SELECT
-  customerId,
-  NTH(1,dealId) AS MostTxnDeal,
-  NTH(2,dealId) AS secondMostTxnDeal,
-  NTH(3,dealId) AS thirdMostTxnDeal
-FROM (SELECT a.customerId AS customerId,
-            b.dealId AS dealId,
+v_query="SELECT a.customerId AS customerId,
+            COALESCE(ch.Chain_Merchant_ID, ch.Merchant_ID ) AS Effective_Merchant_ID,
             COUNT(dealId) AS dealCount
       FROM (SELECT  orderid,
                     customerid
@@ -274,18 +269,57 @@ FROM (SELECT a.customerId AS customerId,
 
 LEFT JOIN (SELECT   orderid,
                     dealid,
-                    offerid,
-                    finalprice/100 as finalprice,
                     categoryid
             FROM [big-query-1233:Atom.order_line]
             WHERE ispaid='t'
               AND finalprice>0
            ) AS b
   ON a.orderid = b.orderid
+LEFT JOIN [${v_dataset_name}.merchant_with_chain_id] ch
+  ON b.dealid = ch.Deal_ID
 WHERE b.dealid<> '14324'
   AND b.dealid NOT IN (select STRING(deal_id) from dbdev.dtr_deals_live)
-GROUP BY 1,2
-ORDER BY 3 DESC
+GROUP BY 1,2";
+
+v_destination_tbl="${v_dataset_name}.most_txns_merchant_base";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating most_txns_merchant_base: $v_task_status";
+
+
+v_subtask="User Attributes Step 3 (a): most_txns_merchant_base creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 3 (a): most_txns_merchant_base
+
+
+## Table 3 (b): most_txns_deal
+
+
+v_query="SELECT
+  customerId,
+  NTH(1,Effective_Merchant_ID) AS MostTxnMerchant,
+  NTH(2,Effective_Merchant_ID) AS secondMostTxnMerchant,
+  NTH(3,Effective_Merchant_ID) AS thirdMostTxnMerchant
+FROM (SELECT customerId
+             , Effective_Merchant_ID
+             , dealCount
+      FROM [${v_dataset_name}.most_txns_merchant_base]
+ORDER BY dealCount DESC
    )
 GROUP BY customerId";
 v_destination_tbl="${v_dataset_name}.most_txns_deal";
@@ -308,10 +342,10 @@ fi
 echo `date` "Creating most_txns_deal: $v_task_status";
 
 
-v_subtask="User Attributes Step 3: most_txns_deal creation";
+v_subtask="User Attributes Step 3 (b): most_txns_deal creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 3: most_txns_deal
+## Completed Table 3 (b): most_txns_deal
 
 
 ## Table 4: latest_redeem_city
@@ -1623,9 +1657,9 @@ v_query="select
   f.thirdLatestMerchantTxn as thirdLatestTxnMerchant,
   f.thirdLatestCatTxn as thirdLatestTxnCategory,
   f.thirdLatestTxnPricePoint AS thirdLatestTxnPricePoint,
-  g.MostTxnDeal AS MostTxnDeal,
-  g.secondMostTxnDeal AS secondMostTxnDeal,
-  g.thirdMostTxnDeal AS thirdMostTxnDeal,
+  g.MostTxnMerchant AS MostTxnMerchant,
+  g.secondMostTxnMerchant AS secondMostTxnMerchant,
+  g.thirdMostTxnMerchant AS thirdMostTxnMerchant,
   h.mostTxnCat AS mostTxnCat,
   h.mostTxnCatPricePoint AS mostTxnCatPricePoint,
   h.secMostTxnCat AS secMostTxnCat,
@@ -1651,7 +1685,7 @@ v_query="select
   j.email_click AS email_click,
   ( j.email_eventSent_t_minus_15 + j.email_open_t_minus_15 + j.email_click_t_minus_15 ) as email_eventSent_t_minus_15,
   (j.email_open_t_minus_15 + j.email_click_t_minus_15) as email_open_t_minus_15,
-  j.email_click AS email_click,
+  j.email_click_t_minus_15 AS email_click_t_minus_15,
   
   l.mostVisitedPlace AS mostVisitedPlace,
   l.mostVisitedPlaceCity AS mostVisitedPlaceCity,

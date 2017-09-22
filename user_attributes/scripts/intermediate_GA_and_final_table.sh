@@ -963,9 +963,9 @@ non_ga.customerid AS customerid
 , non_ga.thirdLatestTxnMerchant AS thirdLatestTxnMerchant
 , non_ga.thirdLatestTxnCategory AS thirdLatestTxnCategory
 , non_ga.thirdLatestTxnPricePoint AS thirdLatestTxnPricePoint
-, non_ga.MostTxnDeal AS MostTxnDeal
-, non_ga.secondMostTxnDeal AS secondMostTxnDeal
-, non_ga.thirdMostTxnDeal AS thirdMostTxnDeal
+, non_ga.MostTxnMerchant AS MostTxnMerchant
+, non_ga.secondMostTxnMerchant AS secondMostTxnMerchant
+, non_ga.thirdMostTxnMerchant AS thirdMostTxnMerchant
 , non_ga.mostTxnCat AS mostTxnCat
 , non_ga.mostTxnCatPricePoint AS mostTxnCatPricePoint
 , non_ga.secMostTxnCat AS secMostTxnCat
