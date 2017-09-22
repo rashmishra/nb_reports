@@ -86,7 +86,7 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 
 
-## Table 1: user_attributes_ga_platform_daytime_affinity
+## Table 1 (a): user_attributes_ga_platform_daytime_affinity
 
 v_query="SELECT 
   Customer_ID,
@@ -100,21 +100,8 @@ v_query="SELECT
     when Sum(case when source='Web' then 1 else 0 end)/count(source) >=0.7 then 'Web'
     when count(source) is null or count(source)=0 then null
     else 'Cross-Platfrom' end as platformAffinity,
-  sum(case when dayofweek(date( session_date ))=2 then 1 else 0 end) as mondaySessions,
-  sum(case when dayofweek(date( session_date ))=3 then 1 else 0 end) as tuesdaySessions,
-  sum(case when dayofweek(date( session_date ))=4 then 1 else 0 end) as wednesdaySessions,
-  sum(case when dayofweek(date( session_date ))=5 then 1 else 0 end) as thursdaySessions,
-  sum(case when dayofweek(date( session_date ))=6 then 1 else 0 end) as fridaySessions,
-  sum(case when dayofweek(date( session_date ))=7 then 1 else 0 end) as saturdaySessions,
-  sum(case when dayofweek(date( session_date ))=1 then 1 else 0 end) as sundaySessions,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (0,1,2) then 1 else 0 end) as AM_0_3,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (3,4,5) then 1 else 0 end) as AM_3_6,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (6,7,8) then 1 else 0 end) as AM_6_9,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (9,10,11) then 1 else 0 end) as AM_9_12,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (12,13,14) then 1 else 0 end) as PM_12_3,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (15,16,17) then 1 else 0 end) as PM_3_6,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (18,19,20) then 1 else 0 end) as PM_6_9,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (21,22,23) then 1 else 0 end) as PM_9_12,
+  sum(case when hour(sec_to_timestamp( session_start_time )) BETWEEN 5 AND 17 then 1 else 0 end) as AM_6_PM_6,
+  sum(case when hour(sec_to_timestamp( session_start_time )) NOT BETWEEN 5 AND 17 then 1 else 0 end) as PM_6_AM_6,
 FROM [big-query-1233:engg_reporting.user_attributes_ga_session_history]
 group by 1";
 
@@ -142,16 +129,47 @@ echo `date` "Creating GA intermediate Table 'user_attributes_ga_platform_daytime
 v_subtask="GA intermediate Table 'user_attributes_ga_platform_daytime_affinity' ";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 1: user_attributes_ga_platform_daytime_affinity
+## Completed Table 1 (a): user_attributes_ga_platform_daytime_affinity
+
+## Table 1 (b): user_attributes_ga_active_since_days
+
+v_query="SELECT Customer_ID
+       , IF (DATE(latestSessionDate) BETWEEN DATE(DATE_ADD(CURRENT_DATE(), -8, 'DAY')) AND DATE(CURRENT_DATE()), 1, 0 ) AS isActive_last_7_days
+       , IF (DATE(latestSessionDate) BETWEEN DATE(DATE_ADD(CURRENT_DATE(), -1, 'MONTH')) AND DATE(CURRENT_DATE()), 1, 0 ) AS isActive_last_30_days
+       , IF (DATE(latestSessionDate) BETWEEN DATE(DATE_ADD(CURRENT_DATE(), -2, 'MONTH')) AND DATE(CURRENT_DATE()), 1, 0 ) AS isActive_last_60_days
+       , IF (DATE(latestSessionDate) BETWEEN DATE(DATE_ADD(CURRENT_DATE(), -3, 'MONTH')) AND DATE(CURRENT_DATE()), 1, 0 ) AS isActive_last_90_days
+FROM ${v_dataset_name}.user_attributes_ga_platform_daytime_affinity
+"
+
+v_destination_tbl="${v_dataset_name}.user_attributes_ga_active_since_days";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating GA intermediate Table 1 (b) 'user_attributes_ga_active_since_days' : $v_task_status";
+
+
+v_subtask="GA intermediate Table 1(b) 'user_attributes_ga_active_since_days' ";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 1 (b): user_attributes_ga_platform_daytime_affinity
 
 ## Table 2: user_attributes_ga_browser_sessions
 
 v_query="select
 Customer_ID,
-Sum(case when deviceBrowser='Chrome' then 1 else 0 end) as chromeSessions,
-Sum(case when deviceBrowser='Firefox' then 1 else 0 end) as firefoxSessions,
-Sum(case when deviceBrowser='Safari' then 1 else 0 end) as safariSessions,
-Sum(case when deviceBrowser='Internet Explorer' then 1 else 0 end) as ieSessions,
 Sum(case when userConnection='2G' then 1 else 0 end ) as twoG,
 Sum(case when userConnection='3G' then 1 else 0 end ) as threeG,
 Sum(case when userConnection='4G' then 1 else 0 end ) as fourG,
@@ -279,8 +297,6 @@ v_query="SELECT dim.Customer_ID AS customerid
       , keys.latestSearchKeyword AS latestSearchKeyword
       , keys.secLatestSearchKeyword AS secLatestSearchKeyword
       , keys.thirdLatestSearchKeyword AS thirdLatestSearchKeyword
-      , keys.fourthLatestSearchKeyword AS fourthLatestSearchKeyword
-      , keys.fifthLatestSearchKeyword AS fifthLatestSearchKeyword
       , COALESCE(perc.percSessionsNearMe, 0.0) AS percSessionsNearMe
 FROM  (SELECT Customer_ID 
        FROM [big-query-1233:engg_reporting.user_attributes_ga_group_A_effective] 
@@ -301,8 +317,6 @@ LEFT JOIN  (SELECT customerid
                  , FIRST(IF(ranka = 1, searchKeyword, null)) AS latestSearchKeyword
                  , FIRST(IF(ranka = 2, searchKeyword, null)) AS secLatestSearchKeyword
                  , FIRST(IF(ranka = 3, searchKeyword, null)) AS thirdLatestSearchKeyword
-                 , FIRST(IF(ranka = 4, searchKeyword, null)) AS fourthLatestSearchKeyword
-                 , FIRST(IF(ranka = 5, searchKeyword, null)) AS fifthLatestSearchKeyword
           FROM (SELECT Customer_ID as customerid,
                        date as session_date,
                        upper(searchKeyword) as searchKeyword,
@@ -353,8 +367,6 @@ v_query="SELECT customerid
        , FIRST(IF(ranka = 1, searchKeyword, null)) AS mostSearchKeyword
        , FIRST(IF(ranka = 2, searchKeyword, null)) AS secMostSearchKeyword
        , FIRST(IF(ranka = 3, searchKeyword, null)) AS thirdMostSearchKeyword
-       , FIRST(IF(ranka = 4, searchKeyword, null)) AS fourthMostSearchKeyword
-       , FIRST(IF(ranka = 5, searchKeyword, null)) AS fifthMostSearchKeyword
 FROM (SELECT   Customer_ID as customerid,
                 upper(searchKeyword) as searchKeyword,
                 count(upper(searchKeyword)) as keywordCount,
@@ -398,11 +410,11 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Table 6: user_attributes_top_deals_browsed
 
 v_query="SELECT customerid 
-       , FIRST(IF(ranka = 1, dealID, null)) AS mostBrowsedDeal
-       , FIRST(IF(ranka = 2, dealID, null)) AS secMostBrowsedDeal
-       , FIRST(IF(ranka = 3, dealID, null)) AS thirdMostBrowsedDeal
+       , FIRST(IF(ranka = 1, Merchant_ID, null)) AS mostBrowsedMerchant
+       , FIRST(IF(ranka = 2, Merchant_ID, null)) AS secMostBrowsedMerchant
+       , FIRST(IF(ranka = 3, Merchant_ID, null)) AS thirdMostBrowsedMerchant
 FROM (SELECT  Customer_ID as customerid,
-              dealID,
+              Merchant_ID,
               count(dealid) as dealViews,
               DENSE_RANK() OVER (PARTITION BY customerid ORDER BY dealViews DESC) AS ranka,
       FROM [big-query-1233:engg_reporting.user_attributes_ga_group_C_effective]
@@ -749,25 +761,12 @@ v_query="select
   a.activeDays as activeDays,
   a.sessionsPerActiveDay as sessionsPerActiveDay,
   a.platformAffinity as platformAffinity,
-  a.mondaySessions as mondaySessions, 
-  a.tuesdaySessions as tuesdaySessions,
-  a.wednesdaySessions as wednesdaySessions,
-  a.thursdaySessions as thursdaySessions,
-  a.fridaySessions as fridaySessions,
-  a.saturdaySessions as saturdaySessions,
-  a.sundaySessions as sundaySessions,
-  a.AM_0_3 as AM_0_3,
-  a.AM_3_6 as AM_3_6,
-  a.AM_6_9 as AM_6_9,
-  a.AM_9_12 as AM_9_12,
-  a.PM_12_3 as PM_12_3,
-  a.PM_3_6 as PM_3_6,
-  a.PM_6_9 as PM_6_9,
-  a.PM_9_12 as PM_9_12,
-  b.chromeSessions as chromeSessions,
-  b.firefoxSessions as firefoxSessions,
-  b.safariSessions as safariSessions, 
-  b.ieSessions as ieSessions,
+  a.AM_6_PM_6 as AM_6_PM_6,
+  a.PM_6_AM_6 as PM_6_AM_6,
+  a2.isActive_last_7_days AS isActive_last_7_days, 
+  a2.isActive_last_30_days AS isActive_last_30_days, 
+  a2.isActive_last_60_days AS isActive_last_60_days, 
+  a2.isActive_last_90_days AS isActive_last_90_days,
   b.twoG as twoG,
   b.threeG as threeG,
   b.fourG as fourG,
@@ -783,16 +782,12 @@ v_query="select
   d.latestSearchKeyword as latestSearchKeyword,
   d.secLatestSearchKeyword as secLatestSearchKeyword,
   d.thirdLatestSearchKeyword as thirdLatestSearchKeyword,
-  d.fourthLatestSearchKeyword as fourthLatestSearchKeyword,
-  d.fifthLatestSearchKeyword as fifthLatestSearchKeyword,  
   e.mostSearchKeyword as mostSearchKeyword,
   e.secMostSearchKeyword as secMostSearchKeyword,
   e.thirdMostSearchKeyword as thirdMostSearchKeyword,
-  e.fourthMostSearchKeyword as fourthMostSearchKeyword,
-  e.fifthMostSearchKeyword as fifthMostSearchKeyword,
-  f.mostBrowsedDeal as mostBrowsedDeal,
-  f.secMostBrowsedDeal as secMostBrowsedDeal,
-  f.thirdMostBrowsedDeal as thirdMostBrowsedDeal,
+  f.mostBrowsedMerchant as mostBrowsedMerchant,
+  f.secMostBrowsedMerchant as secMostBrowsedMerchant,
+  f.thirdMostBrowsedMerchant as thirdMostBrowsedMerchant,
   g.mostBrowsedCat as mostBrowsedCat,
   g.mostBrowsedCatPricepoint as mostBrowsedCatPricepoint,
   g.secMostBrowsedCat as secMostBrowsedCat,
@@ -827,6 +822,9 @@ v_query="select
   h.SNM_pricepoint_browsed as SNM_pricepoint_browsed
 from
 [engg_reporting.user_attributes_ga_platform_daytime_affinity] a
+
+LEFT JOIN [engg_reporting.user_attributes_ga_active_since_days] a2
+on (a.Customer_ID=a2.Customer_ID)
 
 left join [engg_reporting.user_attributes_ga_browser_sessions] b
 on (a.Customer_ID=b.Customer_ID)
@@ -922,33 +920,24 @@ non_ga.customerid AS customerid
 , non_ga.dob_day AS dob_day
 , non_ga.dob_month AS dob_month
 , non_ga.dob_year AS dob_year
-, non_ga.firstPurchaseDate AS firstPurchaseDate
-, non_ga.lastPurchaseDate AS lastPurchaseDate
-, non_ga.totalTxn AS totalTxn
-, non_ga.distinctOffersBought AS distinctOffersBought
-, non_ga.voucherperTxn AS voucherperTxn
-, non_ga.totalVouchers AS totalVouchers
-, non_ga.txnFrequency AS txnFrequency
+, non_ga.raffleFirstPurchaseDate AS raffleFirstPurchaseDate
+, non_ga.nonRaffleFirstPurchaseDate AS nonRaffleFirstPurchaseDate
+, non_ga.raffleLastPurchaseDate AS raffleLastPurchaseDate
+, non_ga.nonRaffleLastPurchaseDate AS nonRaffleLastPurchaseDate
+, non_ga.totalNonRaffleTxn AS totalNonRaffleTxn,
+, non_ga.totalRaffleTxn AS totalRaffleTxn,
+, non_ga.totalNonRaffleVouchers AS totalNonRaffleVouchers,
+, non_ga.totalRaffleVouchers AS totalRaffleVouchers
 , non_ga.percDiscountAffinty AS percDiscountAffinty
-, non_ga.buffet AS buffet
+, non_ga.isBuffet AS isBuffet
 , non_ga.favbuffetdeal AS favbuffetdeal
-, non_ga.brunch AS brunch
+, non_ga.isBrunch AS isBrunch
 , non_ga.favbrunchdeal AS favbrunchdeal
-, non_ga.desserts AS desserts
+, non_ga.isDesserts AS isDesserts
 , non_ga.favdessertdeal AS favdessertdeal
-, non_ga.nonVeg_Veg AS nonVeg_Veg
-, non_ga.favnonVeg_vegdeal AS favnonVeg_vegdeal
-, non_ga.alcoholic AS alcoholic
-, non_ga.favalcoholicdeal AS favalcoholicdeal
-, non_ga.unlimitedDeals AS unlimitedDeals
-, non_ga.favunlimiteddeal AS favunlimiteddeal
-, non_ga.withkids AS withkids
-, non_ga.favwithkidsdeal AS favwithkidsdeal
-, non_ga.breakfast AS breakfast
-, non_ga.lunch AS lunch
-, non_ga.dinner AS dinner
-, non_ga.italianCuisine AS italianCuisine
-, non_ga.southIndianCuisine AS southIndianCuisine
+, non_ga.isBreakfast AS isBreakfast
+, non_ga.isLunch AS isLunch
+, non_ga.isDinner AS isDinner
 , non_ga.totalGB AS totalGB
 , non_ga.totalGR AS totalGR
 , non_ga.cashback AS cashback
@@ -956,12 +945,8 @@ non_ga.customerid AS customerid
 , non_ga.GR_afterFirstCB AS GR_afterFirstCB
 , non_ga.weekendPurchase AS weekendPurchase
 , non_ga.weekdayPurchase AS weekdayPurchase
-, non_ga.weekendPurchase_weekendRedeem AS weekendPurchase_weekendRedeem
-, non_ga.weekendPurchase_weekdayRedeem AS weekendPurchase_weekdayRedeem
-, non_ga.weekdayPurchase_weekendRedeem AS weekdayPurchase_weekendRedeem
-, non_ga.weekdayPurchase_weekdayRedeem AS weekdayPurchase_weekdayRedeem
 , non_ga.unredeemedVouchers AS unredeemedVouchers
-, non_ga.redeemtimediff_mintues AS redeemtimediff_mintues
+, non_ga.redeemtimediff_hours AS redeemtimediff_hours
 , non_ga.cancellations AS cancellations
 , non_ga.redeemed AS redeemed
 , non_ga.refunds AS refunds
@@ -969,18 +954,18 @@ non_ga.customerid AS customerid
 , non_ga.validForOneTx AS validForOneTx
 , non_ga.validForTwoTx AS validForTwoTx
 , non_ga.validForMultipleTx AS validForMultipleTx
-, non_ga.latestTxnDeal AS latestTxnDeal
+, non_ga.LatestTxnMerchant AS LatestTxnMerchant
 , non_ga.latestTxnCategory AS latestTxnCategory
 , non_ga.latestTxnPricePoint AS latestTxnPricePoint
-, non_ga.secLatestTxnDeal AS secLatestTxnDeal
+, non_ga.secLatestTxnMerchant AS secLatestTxnMerchant
 , non_ga.seclatestTxnCategory AS seclatestTxnCategory
 , non_ga.secLatestTxnPricePoint AS secLatestTxnPricePoint
-, non_ga.thirdLatestTxnDeal AS thirdLatestTxnDeal
+, non_ga.thirdLatestTxnMerchant AS thirdLatestTxnMerchant
 , non_ga.thirdLatestTxnCategory AS thirdLatestTxnCategory
 , non_ga.thirdLatestTxnPricePoint AS thirdLatestTxnPricePoint
-, non_ga.MostTxnDeal AS MostTxnDeal
-, non_ga.secondMostTxnDeal AS secondMostTxnDeal
-, non_ga.thirdMostTxnDeal AS thirdMostTxnDeal
+, non_ga.MostTxnMerchant AS MostTxnMerchant
+, non_ga.secondMostTxnMerchant AS secondMostTxnMerchant
+, non_ga.thirdMostTxnMerchant AS thirdMostTxnMerchant
 , non_ga.mostTxnCat AS mostTxnCat
 , non_ga.mostTxnCatPricePoint AS mostTxnCatPricePoint
 , non_ga.secMostTxnCat AS secMostTxnCat
@@ -990,22 +975,24 @@ non_ga.customerid AS customerid
 , non_ga.latestRedeemCity AS latestRedeemCity
 , non_ga.secondLatRedeemCity AS secondLatRedeemCity
 , non_ga.thirdLatRedeemCity AS thirdLatRedeemCity
-, non_ga.PN_scheduled AS PN_scheduled
+, non_ga.latest_communication_date_PN AS latest_communication_date_PN
 , non_ga.PN_delivered AS PN_delivered
 , non_ga.PN_opened AS PN_opened
+, non_ga.PN_dismissed AS PN_dismissed
 , non_ga.PN_failed AS PN_failed
-, non_ga.sms_scheduled AS sms_scheduled
-, non_ga.sms_delivered AS sms_delivered
-, non_ga.sms_clicked AS sms_clicked
-, non_ga.sms_failed AS sms_failed
-, non_ga.inApp_scheduled AS inApp_scheduled
-, non_ga.inApp_delivered AS inApp_delivered
-, non_ga.inApp_opened AS inApp_opened
-, non_ga.inApp_failed AS inApp_failed
+, non_ga.PN_complaint AS PN_complaint
+, non_ga.PN_delivered_t_minus_15 AS PN_delivered_t_minus_15
+, non_ga.PN_opened_t_minus_15 AS PN_opened_t_minus_15
+, non_ga.PN_dismissed_t_minus_15 AS PN_dismissed_t_minus_15
+, non_ga.PN_failed_t_minus_15 AS PN_failed_t_minus_15
+, non_ga.PN_complaint_t_minus_15 AS PN_complaint_t_minus_15
+, non_ga.PN_bounced AS PN_bounced
 , non_ga.email_sent AS email_sent
 , non_ga.email_open AS email_open
 , non_ga.email_click AS email_click
-, non_ga.email_unsubscribe AS email_unsubscribe
+, non_ga.email_sent_t_minus_15 AS email_sent_t_minus_15
+, non_ga.email_open_t_minus_15 AS email_open_t_minus_15
+, non_ga.email_click_t_minus_15 AS email_click_t_minus_15
 
 , non_ga.mostVisitedPlace AS mostVisitedPlace
 , non_ga.mostVisitedPlaceCity AS mostVisitedPlaceCity
@@ -1042,25 +1029,8 @@ ga.latestSessionDate as latestSessionDate,
 ga.activeDays as activeDays,
 ga.sessionsPerActiveDay as sessionsPerActiveDay,
 ga.platformAffinity as platformAffinity,
-ga.mondaySessions as mondaySessions,
-ga.tuesdaySessions as tuesdaySessions,
-ga.wednesdaySessions as wednesdaySessions,
-ga.thursdaySessions as thursdaySessions,
-ga.fridaySessions as fridaySessions,
-ga.saturdaySessions as saturdaySessions,
-ga.sundaySessions as sundaySessions,
-ga.AM_0_3 as AM_0_3,
-ga.AM_3_6 as AM_3_6,
-ga.AM_6_9 as AM_6_9,
-ga.AM_9_12 as AM_9_12,
-ga.PM_12_3 as PM_12_3,
-ga.PM_3_6 as PM_3_6,
-ga.PM_6_9 as PM_6_9,
-ga.PM_9_12 as PM_9_12,
-ga.chromeSessions as chromeSessions,
-ga.firefoxSessions as firefoxSessions,
-ga.safariSessions as safariSessions,
-ga.ieSessions as ieSessions,
+ga.AM_6_PM_6 as AM_6_PM_6,
+ga.PM_6_AM_6 as PM_6_AM_6,
 ga.twoG as twoG,
 ga.threeG as threeG,
 ga.fourG as fourG,
@@ -1076,16 +1046,12 @@ ga.sourceOfAcquisition_txn as sourceOfAcquisition_txn,
 ga.latestSearchKeyword as latestSearchKeyword,
 ga.secLatestSearchKeyword as secLatestSearchKeyword,
 ga.thirdLatestSearchKeyword as thirdLatestSearchKeyword,
-ga.fourthLatestSearchKeyword as fourthLatestSearchKeyword,
-ga.fifthLatestSearchKeyword as fifthLatestSearchKeyword,
 ga.mostSearchKeyword as mostSearchKeyword,
 ga.secMostSearchKeyword as secMostSearchKeyword,
 ga.thirdMostSearchKeyword as thirdMostSearchKeyword,
-ga.fourthMostSearchKeyword as fourthMostSearchKeyword,
-ga.fifthMostSearchKeyword as fifthMostSearchKeyword,
-ga.mostBrowsedDeal as mostBrowsedDeal,
-ga.secMostBrowsedDeal as secMostBrowsedDeal,
-ga.thirdMostBrowsedDeal as thirdMostBrowsedDeal,
+ga.mostBrowsedMerchant as mostBrowsedMerchant,
+ga.secMostBrowsedMerchant as secMostBrowsedMerchant,
+ga.thirdMostBrowsedMerchant as thirdMostBrowsedMerchant,
 ga.mostBrowsedCat as mostBrowsedCat,
 ga.mostBrowsedCatPricepoint as mostBrowsedCatPricepoint,
 ga.secMostBrowsedCat as secMostBrowsedCat,

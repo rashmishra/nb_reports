@@ -47,22 +47,50 @@ v_dataset_name="engg_reporting";
 
 
 
-## Table 1: latest_three_txn
-									# Category (Transaction)
-									# Primary SKU (Transaction)
-									# Price point (Transaction)
+## Table 0: merchant_with_chain_id
+# Chain Merchant IDs for a Merchant at Deal level
 
-v_query="SELECT  customerId,
-        NTH(1,dealId) AS latestDealTxn,
-        NTH(1,categoryId) AS latestCatTxn,
-        NTH(1,pricePoint) AS latestTxnPricePoint,
-        NTH(2,dealId) AS secLatestDealTxn,
-        NTH(2,categoryId) AS secLatestCatTxn,
-        NTH(2,pricePoint) AS secLatestTxnPricePoint,
-        NTH(3,dealId) AS thirdLatestDealTxn,
-        NTH(3,categoryId) AS thirdLatestCatTxn,
-        NTH(3,pricePoint) AS thirdLatestTxnPricePoint
-FROM (SELECT  a.customerId AS customerId,
+
+v_query="SELECT id AS Deal_ID, mappings.chain.id AS Chain_Merchant_ID
+       , mappings.merchant.id AS Merchant_ID
+FROM FLATTEN([Atom.mapping] , mappings.chain.id)
+WHERE type = 'deal'
+GROUP BY Chain_Merchant_ID, Merchant_ID, Deal_ID";
+
+
+v_destination_tbl="${v_dataset_name}.merchant_with_chain_id";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating merchant_with_chain_id: $v_task_status";
+
+
+v_subtask="User Attributes Step 0: merchant_with_chain_id creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 0: merchant_with_chain_id
+
+
+
+## Table 1 (a): price_point_base
+                                    # Category (Transaction)
+                                    # Primary SKU (Transaction)
+                                    # Price point (Transaction)
+
+v_query="SELECT  a.customerId AS customerId,
               b.dealId AS dealId,
               b.categoryId as categoryId,
               txn_time,
@@ -86,8 +114,54 @@ FROM (SELECT  a.customerId AS customerId,
       ON  a.orderid = b.orderid
       WHERE b.dealid<> '14324'
       AND b.dealid NOT IN (select STRING(deal_id) from dbdev.dtr_deals_live)
-      GROUP BY 1,2,3,4
-      ORDER BY 4 DESC
+      GROUP BY 1,2,3,4";
+
+v_destination_tbl="${v_dataset_name}.price_point_base";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating price_point_base: $v_task_status";
+
+
+v_subtask="User Attributes Step 1 (a): price_point_base creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 1 (a): price_point_base
+
+## Table 1 (b): latest_three_txn
+                                    # Category (Transaction)
+                                    # Primary SKU (Transaction)
+                                    # Price point (Transaction)
+
+v_query="SELECT  customerId,
+        NTH(1,Effective_Merchant_ID) AS latestMerchantTxn,
+        NTH(1,categoryId) AS latestCatTxn,
+        NTH(1,pricePoint) AS latestTxnPricePoint,
+        NTH(2,Effective_Merchant_ID) AS secLatestMerchantTxn,
+        NTH(2,categoryId) AS secLatestCatTxn,
+        NTH(2,pricePoint) AS secLatestTxnPricePoint,
+        NTH(3,Effective_Merchant_ID) AS thirdLatestMerchantTxn,
+        NTH(3,categoryId) AS thirdLatestCatTxn,
+        NTH(3,pricePoint) AS thirdLatestTxnPricePoint
+FROM (SELECT  customerId, dealId, categoryId, txn_time, pricePoint
+        , COALESCE( Chain_Merchant_ID, Merchant_ID) AS Effective_Merchant_ID
+      FROM ${v_dataset_name}.price_point_base pp
+      LEFT JOIN [engg_reporting.merchant_with_chain_id] ch
+          ON pp.dealId = ch.Deal_ID
+      ORDER BY txn_time DESC
 )
 GROUP BY customerId";
 
@@ -111,10 +185,10 @@ fi
 echo `date` "Creating latest_three_txn: $v_task_status";
 
 
-v_subtask="User Attributes Step 1: latest_three_txn creation";
+v_subtask="User Attributes Step 1 (b): latest_three_txn creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 1: latest_three_txn
+## Completed Table 1 (b): latest_three_txn
 
 ## Table 2: most_txn_category
 
@@ -180,16 +254,11 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Completed Table 2: most_txn_category
 
 
-## Table 3: most_txns_deal
+## Table 3 (a): most_txns_merchant_base
 
 
-v_query="SELECT
-  customerId,
-  NTH(1,dealId) AS MostTxnDeal,
-  NTH(2,dealId) AS secondMostTxnDeal,
-  NTH(3,dealId) AS thirdMostTxnDeal
-FROM (SELECT a.customerId AS customerId,
-            b.dealId AS dealId,
+v_query="SELECT a.customerId AS customerId,
+            COALESCE(ch.Chain_Merchant_ID, ch.Merchant_ID ) AS Effective_Merchant_ID,
             COUNT(dealId) AS dealCount
       FROM (SELECT  orderid,
                     customerid
@@ -200,18 +269,57 @@ FROM (SELECT a.customerId AS customerId,
 
 LEFT JOIN (SELECT   orderid,
                     dealid,
-                    offerid,
-                    finalprice/100 as finalprice,
                     categoryid
             FROM [big-query-1233:Atom.order_line]
             WHERE ispaid='t'
               AND finalprice>0
            ) AS b
   ON a.orderid = b.orderid
+LEFT JOIN [${v_dataset_name}.merchant_with_chain_id] ch
+  ON b.dealid = ch.Deal_ID
 WHERE b.dealid<> '14324'
   AND b.dealid NOT IN (select STRING(deal_id) from dbdev.dtr_deals_live)
-GROUP BY 1,2
-ORDER BY 3 DESC
+GROUP BY 1,2";
+
+v_destination_tbl="${v_dataset_name}.most_txns_merchant_base";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating most_txns_merchant_base: $v_task_status";
+
+
+v_subtask="User Attributes Step 3 (a): most_txns_merchant_base creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 3 (a): most_txns_merchant_base
+
+
+## Table 3 (b): most_txns_deal
+
+
+v_query="SELECT
+  customerId,
+  NTH(1,Effective_Merchant_ID) AS MostTxnMerchant,
+  NTH(2,Effective_Merchant_ID) AS secondMostTxnMerchant,
+  NTH(3,Effective_Merchant_ID) AS thirdMostTxnMerchant
+FROM (SELECT customerId
+             , Effective_Merchant_ID
+             , dealCount
+      FROM [${v_dataset_name}.most_txns_merchant_base]
+ORDER BY dealCount DESC
    )
 GROUP BY customerId";
 v_destination_tbl="${v_dataset_name}.most_txns_deal";
@@ -234,10 +342,10 @@ fi
 echo `date` "Creating most_txns_deal: $v_task_status";
 
 
-v_subtask="User Attributes Step 3: most_txns_deal creation";
+v_subtask="User Attributes Step 3 (b): most_txns_deal creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 3: most_txns_deal
+## Completed Table 3 (b): most_txns_deal
 
 
 ## Table 4: latest_redeem_city
@@ -373,83 +481,82 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ## Completed Table 5: txn_valid_for
 
+
 ## Table 6: txn_summary
 
-
-v_query="SELECT
-  a.customerid as customerid,
-  a.name as name,
-  a.gender as gender,
-  a.dob.day as dob_day,
-  a.dob.month as dob_month,
-  a.dob.year as dob_year,
-  b.firstPurchaseDate as firstPurchaseDate,
-  b.lastPurchaseDate as lastPurchaseDate,
-  b.totalTxn as totalTxn,
-  b.distinctOffersBought as distinctOffersBought,
-  b.voucherperTxn as voucherperTxn,
-  b.totalVouchers as totalVouchers,
-  b.txnFrequency as txnFrequency,
-  b.percDiscountAffinty as percDiscountAffinty
-FROM
-(SELECT 
-  customerId,
-  name,
-  gender,
-  dob.day,
-  dob.month,
-  dob.year
-FROM
-  [big-query-1233:Atom.customer]
-WHERE 
-  isValidated=true) as a
-  
-LEFT JOIN
-(SELECT 
-  z.customerId as customerId,
-  DATE(MIN(PurchaseDate)) AS firstPurchaseDate,
-  DATE(MAX(PurchaseDate)) AS lastPurchaseDate,
-  COUNT(UNIQUE(x.orderid)) as totalTxn,
-  COUNT(UNIQUE(offerid)) AS distinctOffersBought,
-  COUNT(offerid) as offersBought,
-  ROUND(COUNT(orderlineid)/COUNT(DISTINCT(x.orderid)),2) AS voucherperTxn,
-  COUNT(orderlineid) AS totalVouchers,
-  ROUND(COUNT(UNIQUE(x.orderId))/(DATEDIFF(MAX(PurchaseDate),MIN(PurchaseDate))+1),2) AS txnFrequency,
-  ROUND((SUM(CASE WHEN z.promocode is not null THEN 1 ELSE 0 END)/COUNT(x.orderId))*100,2) AS percDiscountAffinty
-FROM
-(SELECT
-  orderlineid,
-  orderid,
-  dealid,
-  offerid,
-  voucherid,
-  MSEC_TO_TIMESTAMP(redemptiondate+19800000 ) AS redeemDate,
-  MSEC_TO_TIMESTAMP(createdat+19800000 ) AS PurchaseDate
-FROM [big-query-1233:Atom.order_line]
-WHERE ispaid='t'
-AND finalprice >0
-AND dealid<> '14324'
-AND dealid NOT IN (select STRING(deal_id) from dbdev.dtr_deals_live)
-GROUP BY 1,2,3,4,5,6,7
-) AS x
-
-LEFT JOIN ( SELECT  orderid,
-  promocode,
-  customerid
-FROM [big-query-1233:Atom.order_header]
-WHERE ispaid='t'
-AND totalprice>0
-GROUP BY
-1,2,3) AS z
-ON
-  (x.orderid = z.orderid)
-WHERE LENGTH(z.customerId)>5 
-AND  x.dealid<> '14324'
-AND x.dealid NOT IN (select STRING(deal_id) from dbdev.dtr_deals_live)
-GROUP BY
-1) as b
-ON (a.customerId=b.customerId)
-";
+v_query="SELECT  a.customerid AS customerid
+        , a.name AS name
+        , a.gender AS gender
+        , a.dob.day AS dob_day
+        , a.dob.month AS dob_month
+        , a.dob.year AS dob_year
+        , b.raffleFirstPurchaseDate AS raffleFirstPurchaseDate
+        , b.nonRaffleFirstPurchaseDate AS nonRaffleFirstPurchaseDate
+        , b.nonRaffleLastPurchaseDate AS nonRaffleLastPurchaseDate
+        , b.raffleLastPurchaseDate AS raffleLastPurchaseDate
+        , b.totalNonRaffleTxn AS totalNonRaffleTxn
+        , b.totalRaffleTxn AS totalRaffleTxn
+        , b.totalNonRaffleVouchers AS totalNonRaffleVouchers
+        , b.totalRaffleVouchers AS totalRaffleVouchers
+        , b.percDiscountAffinty AS percDiscountAffinty
+FROM (SELECT customerId
+             , name
+             , gender
+             , dob.day
+             , dob.month
+             , dob.year
+    FROM [big-query-1233:Atom.customer]
+    WHERE isValidated=true
+    ) AS a
+LEFT JOIN (SELECT z.customerId AS customerId,
+                  DATE(MIN(nonRafflePurchaseDate)) AS nonRaffleFirstPurchaseDate,
+                  DATE(MAX(nonRafflePurchaseDate)) AS nonRaffleLastPurchaseDate,
+                  DATE(MIN(rafflePurchaseDate)) AS raffleFirstPurchaseDate,
+                  DATE(MAX(rafflePurchaseDate)) AS raffleLastPurchaseDate,
+                  COUNT(UNIQUE(nonRaffleOrderId)) AS totalNonRaffleTxn,
+                  COUNT(UNIQUE(raffleOrderId)) AS totalRaffleTxn,
+                  COUNT(nonRaffleOfferId) AS nonRaffleoffersBought,
+                  COUNT(raffleOfferId) AS raffleOffersBought,
+                  COUNT(nonRaffleOrderlineId) AS totalNonRaffleVouchers,
+                  COUNT(raffleOrderlineId) AS totalRaffleVouchers,
+                  ROUND((SUM(CASE WHEN z.promocode IS NOT NULL
+                                 THEN 1 
+                               ELSE 0 
+                             END)/COUNT(nonRaffleOrderId))*100
+                         ,2) AS percDiscountAffinty
+          FROM (SELECT orderlineid
+                      , orderid
+                      , dealid
+                      , voucherid
+                      , CASE WHEN finalprice > 0 THEN MSEC_TO_TIMESTAMP(redemptiondate + 19800000 ) ELSE NULL END AS nonRaffleRedeemDate
+                      , CASE WHEN finalprice = 0 THEN MSEC_TO_TIMESTAMP(redemptiondate + 19800000 ) ELSE NULL END AS raffleRedeemDate
+                      , CASE WHEN finalprice > 0 THEN MSEC_TO_TIMESTAMP(createdat + 19800000 ) ELSE NULL END AS nonRafflePurchaseDate
+                      , CASE WHEN finalprice = 0 THEN MSEC_TO_TIMESTAMP(createdat + 19800000 ) ELSE NULL END AS rafflePurchaseDate
+                      , CASE WHEN finalprice = 0 THEN offerid ELSE NULL END AS raffleOfferId
+                      , CASE WHEN finalprice > 0 THEN offerid ELSE NULL END AS nonRaffleOfferId
+                      , CASE WHEN finalprice = 0 THEN orderlineid ELSE NULL END AS raffleOrderlineId
+                      , CASE WHEN finalprice > 0 THEN orderlineid ELSE NULL END AS nonRaffleOrderlineId
+              FROM [big-query-1233:Atom.order_line]
+              WHERE ispaid = 't'
+              GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+              ) AS x
+          LEFT JOIN (SELECT orderid
+                            , promocode
+                            , customerid
+                            , CASE WHEN totalprice = 0 THEN orderid ELSE NULL END AS raffleOrderId
+                            , CASE WHEN totalprice > 0 THEN orderid ELSE NULL END AS nonRaffleOrderId
+                      FROM [big-query-1233:Atom.order_header]
+                      WHERE ispaid='t'
+                      GROUP BY 1, 2, 3, 4, 5
+                    ) AS z
+              ON (x.orderid = z.orderid)
+          WHERE LENGTH(z.customerId)>5 
+            AND x.dealid<> '14324'
+            AND x.dealid NOT IN (SELECT STRING(deal_id) 
+                                   FROM dbdev.dtr_deals_live)
+          GROUP BY 1
+          ) AS b
+    ON (a.customerId=b.customerId)";
 v_destination_tbl="${v_dataset_name}.txn_summary";
 
 echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
@@ -631,36 +738,20 @@ v_query="select
   a.customerid as customerid,
   weekendPurchase,
   weekdayPurchase,
-  weekendPurchase_weekendRedeem,
-  weekendPurchase_weekdayRedeem,
-  weekdayPurchase_weekendRedeem,
-  weekdayPurchase_weekdayRedeem,
   unredeemedVouchers,
-  ROUND(b.redeemtimediff_mintues, 3) as redeemtimediff_mintues
+  ROUND(b.redeemtimediff_hours, 1) as redeemtimediff_hours
 from
 (SELECT
   customerid,
   SUM(weekendPurchase) AS weekendPurchase,
   SUM(weekdayPurchase) AS weekdayPurchase,
-  SUM(weekendPurchase_weekendRedeem) AS weekendPurchase_weekendRedeem,
-  SUM(weekendPurchase_weekdayRedeem) AS weekendPurchase_weekdayRedeem,
-  SUM(weekdayPurchase_weekendRedeem) AS weekdayPurchase_weekendRedeem,
-  SUM(weekdayPurchase_weekdayRedeem) AS weekdayPurchase_weekdayRedeem,
   SUM(unredeemedVouchers) AS unredeemedVouchers,
---  AVG(redeemtimediff) AS redeemtimediff_mintues,
---  AVG(distanceinkm) AS redeemDistance
 FROM
 (SELECT 
   c.customerId as customerId,
-  CASE WHEN DAYOFWEEK(createDate) in (1,7) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekendPurchase,
-  CASE WHEN DAYOFWEEK(createDate) in (2,3,4,5,6) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekdayPurchase,
-  CASE WHEN DAYOFWEEK(createDate) in (1,7) AND DAYOFWEEK(redeemdate) in (1,7) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekendPurchase_weekendRedeem,
-  CASE WHEN DAYOFWEEK(createDate) in (1,7) AND DAYOFWEEK(redeemdate) in (2,3,4,5,6) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekendPurchase_weekdayRedeem,
-  CASE WHEN DAYOFWEEK(createDate) in (2,3,4,5,6) AND DAYOFWEEK(redeemdate) in (1,7) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekdayPurchase_weekendRedeem,
-  CASE WHEN DAYOFWEEK(createDate) in (2,3,4,5,6) AND DAYOFWEEK(redeemdate) in (2,3,4,5,6) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekdayPurchase_weekdayRedeem,
-  SUM(CASE WHEN redeemdate is null THEN 1 ELSE 0 END) AS unredeemedVouchers,
---  FLOOR((redeemdate - createdate)/1000000/60) AS redeemtimediff,
---  ROUND((SQRT(((69.1 * (redemptionlat - buyinglat)) * (69.1 * (redemptionlat - buyinglat)))+ ((69.1 * (redemptionlong - buyinglong) * COS(buyinglat / 57.3)) * (69.1 * (redemptionlong - buyinglong) * COS(buyinglat / 57.3)))) * 1.60934),2) AS distanceinkm
+  CASE WHEN DAYOFWEEK(createDate) in (1,6,7) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekendPurchase,
+  CASE WHEN DAYOFWEEK(createDate) in (2,3,4,5) THEN EXACT_COUNT_DISTINCT(b.orderid) END AS weekdayPurchase,
+  SUM(CASE WHEN redeemdate is null THEN 1 ELSE 0 END) AS unredeemedVouchers
 FROM
 (SELECT
   orderid,
@@ -697,7 +788,7 @@ GROUP BY
 left join (
 select
   customerid,
-  avg(FLOOR((redeemdate - createdate)/1000000/60)) as redeemtimediff_mintues
+  AVG(FLOOR((redeemdate - createdate)/1000000/60)/60) as redeemtimediff_hours
 from
 (SELECT
   orderid,
@@ -1018,10 +1109,100 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Completed Table 13 (a): mall_market_street_info
 
 
+## Table 13 (b): mms_visits
+
+v_query="SELECT customerid
+                   , hotspot
+                   , hotspotCity
+                   , COUNT(hotspotEntered) AS visits
+            FROM (SELECT ul.customerId as customerid
+                         , mms.name as hotspot
+                         , mms.city as hotspotCity
+                         , DATE(MSEC_TO_TIMESTAMP(ul.time + 19800000)) AS date_entered
+                         , hotspotEntered
+                    FROM cerebro.user_location as ul
+                    INNER JOIN Atom.mall_market_street as mms on ul.hotspotEntered = mms._id
+                    WHERE ul.hotspotEntered is not null AND ul.distanceFromHotspot < 25
+                    GROUP BY 1, 2, 3, 4, 5
+            )
+            GROUP BY 1, 2, 3";
 
 
-## Table 13 (b): most_visited
+v_destination_tbl="${v_dataset_name}.mms_visits";
 
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating mms_visits: $v_task_status";
+
+
+v_subtask="User Attributes Step 13 (b): mms_visits creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 13 (b): mms_visits
+
+
+
+## Table 13 (c): mms_most_visits
+
+v_query="SELECT   customerid , 
+                NTH(1, hotspot) AS mostVisitedPlace,
+                NTH(1, hotspotCity) AS mostVisitedPlaceCity,
+                NTH(1, visits) AS times1,
+                NTH(2, hotspot) AS secMostVisitedPlace,
+                NTH(2, hotspotCity) AS secMostVisitedPlaceCity,
+                NTH(2, visits) AS times2,
+                NTH(3, hotspot) AS thirdMostVisitedPlace,
+                NTH(3, hotspotCity) AS thirdMostVisitedPlaceCity,
+                NTH(3, visits) AS times3
+      FROM (SELECT customerid
+                   , hotspot
+                   , hotspotCity
+                   , visits
+            FROM ${v_dataset_name}.mms_visits
+            ORDER BY visits DESC
+            )
+      GROUP BY 1";
+
+
+v_destination_tbl="${v_dataset_name}.mms_most_visits";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating mms_most_visits: $v_task_status";
+
+
+v_subtask="User Attributes Step 13 (c): mms_most_visits creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 13 (c): mms_most_visits
+
+## Table 13 (d): most_visited
 
 v_query="SELECT  customerid AS int_customerid , 
         CAST(customerid AS STRING) AS customerid,
@@ -1043,28 +1224,7 @@ v_query="SELECT  customerid AS int_customerid ,
         m3.polygonId AS polygonId3,
         m3.total as totalMerchants3,
         m3.selling as sellingMerchants3,
-FROM (SELECT   customerid , 
-                NTH(1, hotspot) AS mostVisitedPlace,
-                NTH(1, hotspotCity) AS mostVisitedPlaceCity,
-                NTH(1, visits) AS times1,
-                NTH(2, hotspot) AS secMostVisitedPlace,
-                NTH(2, hotspotCity) AS secMostVisitedPlaceCity,
-                NTH(2, visits) AS times2,
-                NTH(3, hotspot) AS thirdMostVisitedPlace,
-                NTH(3, hotspotCity) AS thirdMostVisitedPlaceCity,
-                NTH(3, visits) AS times3
-      FROM (SELECT ul.customerId as customerid, mms.name as hotspot
-                    , mms.city as hotspotCity
-                    , count(hotspotEntered) as visits
-            FROM cerebro.user_location as ul
-            join Atom.mall_market_street as mms on ul.hotspotEntered = mms._id
-            where ul.hotspotEntered is not null AND ul.distanceFromHotspot < 25
-            GROUP BY 1,2,3
-      order by visits desc
-            )
-      GROUP BY 1
-) as x
-
+FROM [${v_dataset_name}.mms_most_visits] as x
 LEFT JOIN [engg_reporting.mall_market_street_info] as m1
 on (x.mostVisitedPlace=m1.mallName
   AND x.mostVisitedPlaceCity=m1.cityName)
@@ -1115,36 +1275,133 @@ fi
 echo `date` "Creating most_visited: $v_task_status";
 
 
-v_subtask="User Attributes Step 13: most_visited creation";
+v_subtask="User Attributes Step 13 (d): most_visited creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 13 (b): most_visited
+## Completed Table 13 (d): most_visited
 
 
 
-## Table 14: engagement_behaviour
+## Table 14 (a): engagement_PN_dim
+
+v_query="SELECT customerid
+       , latest_communication_date_PN
+       , CAST(DATE(DATE_ADD(latest_communication_date_PN, -15, 'DAY')) AS DATE) AS t_minus_15
+       , CAST(DATE(DATE_ADD(latest_communication_date_PN, -2, 'MONTH')) AS DATE) AS t_minus_60
+FROM (SELECT  userid as customerid
+        , CAST(DATE( MSEC_TO_TIMESTAMP(MAX( createdAt) + 19800000)) AS DATE) AS latest_communication_date_PN
+FROM [big-query-1233:Atom.message] 
+WHERE communicationMedium=2
+  AND lifecyclestatus IN (40, 50, 60)
+GROUP BY 1
+)";
+
+v_destination_tbl="${v_dataset_name}.engagement_PN_dim";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating engagement_PN_dim: $v_task_status";
+
+
+v_subtask="User Attributes Step 14 (a): engagement_PN_dim creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 14 (a): engagement_PN_dim
+
+
+## Table 14 (b): engagement_PN_active_base
+
+v_query="SELECT dim.customerid AS customerid
+                  , dim.latest_communication_date_PN AS latest_communication_date_PN
+                  , CAST(DATE(dim.t_minus_15) AS DATE) AS latest_communication_date_PN_minus_15_days
+                  , CAST(DATE(dim.t_minus_60) AS DATE) AS latest_communication_date_PN_minus_60_days
+                  , COUNT(CASE WHEN lifecyclestatus=10 THEN 1 ELSE NULL END ) as PN_scheduled
+                  , COUNT(CASE WHEN lifecyclestatus=40 THEN 1 ELSE NULL END ) as PN_delivered
+                  , COUNT(CASE WHEN lifecyclestatus=50 THEN 1 ELSE NULL END ) as PN_dismissed
+                  , COUNT(CASE WHEN lifecyclestatus=60 THEN 1 ELSE NULL END ) as PN_opened
+                  , COUNT(CASE WHEN lifecyclestatus=80 THEN 1 ELSE NULL END ) as PN_failed
+                  , COUNT(CASE WHEN lifecyclestatus=90 THEN 1 ELSE NULL END ) as PN_complaint
+                  , COUNT(CASE WHEN lifecyclestatus=100 THEN 1 ELSE NULL END ) as PN_bounced
+                  
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=10 then 1 ELSE 0 end ) as PN_scheduled_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=40 then 1 ELSE 0 end ) as PN_delivered_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=50 then 1 ELSE 0 end ) as PN_dismissed_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=60 then 1 ELSE 0 end ) as PN_opened_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=80 then 1 ELSE 0 end ) as PN_failed_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=90 then 1 ELSE 0 end ) as PN_complaint_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=100 then 1 ELSE 0 end ) as PN_bounced_t_minus_15
+          FROM [big-query-1233:${v_dataset_name}.engagement_PN_dim] dim
+          INNER JOIN [big-query-1233:Atom.message] msg
+            ON dim.customerid = msg.userid
+          WHERE communicationMedium = 2
+            AND DATE(MSEC_TO_TIMESTAMP( createdAt + 19800000 )) >= DATE(dim.t_minus_60)
+          GROUP BY customerid, latest_communication_date_PN, latest_communication_date_PN_minus_15_days, latest_communication_date_PN_minus_60_days";
+
+v_destination_tbl="${v_dataset_name}.engagement_PN_active_base";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating engagement_PN_active_base: $v_task_status";
+
+
+v_subtask="User Attributes Step 14 (b): engagement_PN_active_base creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 14 (b): engagement_PN_active_base
+
+
+## Table 14 (c): engagement_behaviour
 
 
 v_query="SELECT
   a.customerid as customerid,
-  b.PN_scheduled as PN_scheduled,
-  b.PN_delivered as PN_delivered,
-  b.PN_opened as PN_opened,
-  b.PN_failed as PN_failed,
-  b.sms_scheduled as sms_scheduled,
-  b.sms_delivered as sms_delivered,
-  b.sms_clicked as sms_clicked,
-  b.sms_failed as sms_failed,
-  b.inApp_scheduled as inApp_scheduled,
-  b.inApp_delivered as inApp_delivered,
-  b.inApp_opened as inApp_opened,
-  b.inApp_failed as inApp_failed,
-  c.email_bulkSent as email_bulkSent,
-  c.email_eventSent as email_eventSent,
-  c.email_bulkbounce as email_bulkbounce,
+  b.latest_communication_date_PN AS latest_communication_date_PN,
+  b.PN_scheduled AS PN_scheduled,
+  b.PN_delivered AS PN_delivered,
+  b.PN_dismissed AS PN_dismissed,
+  b.PN_opened AS PN_opened,
+  b.PN_failed AS PN_failed,
+  b.PN_complaint AS PN_complaint,
+  b.PN_bounced AS  PN_bounced,
+  b.PN_scheduled_t_minus_15 AS PN_scheduled_t_minus_15,
+  b.PN_delivered_t_minus_15 AS PN_delivered_t_minus_15,
+  b.PN_dismissed_t_minus_15 AS PN_dismissed_t_minus_15,
+  b.PN_opened_t_minus_15 AS PN_opened_t_minus_15,
+  b.PN_failed_t_minus_15 AS PN_failed_t_minus_15,
+  b.PN_complaint_t_minus_15 AS PN_complaint_t_minus_15,
+  b.PN_bounced_t_minus_15 AS  PN_bounced_t_minus_15,
   c.email_open as email_open,
   c.email_click as email_click,
-  c.email_unsubscribe as email_unsubscribe
+  c.email_eventSent AS email_eventSent,
+  d.email_open_t_minus_15 as email_open_t_minus_15,
+  d.email_click_t_minus_15 as email_click_t_minus_15,
+  d.email_eventSent_t_minus_15 AS email_eventSent_t_minus_15,
 FROM (SELECT  customerId,
               name,
               gender,
@@ -1152,36 +1409,24 @@ FROM (SELECT  customerId,
     FROM [big-query-1233:Atom.customer]
     WHERE isValidated=true
     ) as a
-
-LEFT JOIN (SELECT  userid as customerid,
-                  COUNT(case when lifecyclestatus=10 and communicationMedium=2 then 1 end ) as PN_scheduled,
-                  COUNT(case when lifecyclestatus=40 and communicationMedium=2 then 1 end ) as PN_delivered,
-                  COUNT(case when lifecyclestatus=60 and communicationMedium=2 then 1 end ) as PN_opened,
-                  COUNT(case when lifecyclestatus=80 and communicationMedium=2 then 1 end ) as PN_failed,
-                  COUNT(case when lifecyclestatus=10 and communicationMedium=3 then 1 end ) as sms_scheduled,
-                  COUNT(case when lifecyclestatus=40 and communicationMedium=3 then 1 end ) as sms_delivered,
-                  COUNT(case when lifecyclestatus=70 and communicationMedium=3 then 1 end ) as sms_clicked,
-                  COUNT(case when lifecyclestatus=80 and communicationMedium=3 then 1 end ) as sms_failed,
-                  COUNT(case when lifecyclestatus=10 and communicationMedium=4 then 1 end ) as inApp_scheduled,
-                  COUNT(case when lifecyclestatus=40 and communicationMedium=4 then 1 end ) as inApp_delivered,
-                  COUNT(case when lifecyclestatus=60 and communicationMedium=4 then 1 end ) as inApp_opened,
-                  COUNT(case when lifecyclestatus=80 and communicationMedium=4 then 1 end ) as inApp_failed,
-          FROM [big-query-1233:Atom.message] 
-          group by 1
-          ) as b
-ON a.customerid = b.customerid
-left join (SELECT
-              uid,
-              count(case when Event_Type_ID=1 then 1 end) as email_bulkSent,
-              count(case when Event_Type_ID=2 then 1 end) as email_eventSent,
-              count(case when Event_Type_ID=3 then 1 end) as email_bulkbounce,
-              count(case when Event_Type_ID=10 then 1 end) as email_open,
-              count(case when Event_Type_ID=20 then 1 end) as email_click,
-              count(case when Event_Type_ID=50 then 1 end) as email_unsubscribe
-            FROM (TABLE_DATE_RANGE([big-query-1233:cheetah.cheetah_], TIMESTAMP(DATE_ADD(TIMESTAMP(CURRENT_DATE()),-365,'DAY')), TIMESTAMP(CURRENT_DATE())))
+LEFT JOIN ${v_dataset_name}.engagement_PN_active_base b
+    ON a.customerid = b.customerid
+LEFT JOIN (SELECT uid
+              , COUNT(CASE WHEN Event_Type_ID=10 THEN 1 END) AS email_open
+              , COUNT(CASE WHEN Event_Type_ID=2 THEN 1 END) AS email_eventSent
+              , COUNT(CASE WHEN Event_Type_ID=20 THEN 1 END) AS email_click
+            FROM (TABLE_DATE_RANGE([big-query-1233:cheetah.cheetah_], TIMESTAMP(DATE_ADD(TIMESTAMP(CURRENT_DATE()), -61,'DAY')), TIMESTAMP(CURRENT_DATE())))
             GROUP BY 1
             ) as c
-on a.primaryemailaddress=c.uid";
+on a.primaryemailaddress=c.uid
+LEFT JOIN (SELECT uid
+              , COUNT(CASE WHEN Event_Type_ID=10 THEN 1 END) AS email_open_t_minus_15
+              , COUNT(CASE WHEN Event_Type_ID=2 THEN 1 END) AS email_eventSent_t_minus_15
+              , COUNT(CASE WHEN Event_Type_ID=20 THEN 1 END) AS email_click_t_minus_15
+            FROM (TABLE_DATE_RANGE([big-query-1233:cheetah.cheetah_], TIMESTAMP(DATE_ADD(TIMESTAMP(CURRENT_DATE()), -16,'DAY')), TIMESTAMP(CURRENT_DATE())))
+            GROUP BY 1
+            ) as d
+on a.primaryemailaddress=d.uid";
 
 v_destination_tbl="${v_dataset_name}.engagement_behaviour";
 
@@ -1203,13 +1448,69 @@ fi
 echo `date` "Creating engagement_behaviour: $v_task_status";
 
 
-v_subtask="User Attributes Step 14: engagement_behaviour creation";
+v_subtask="User Attributes Step 14 (c): engagement_behaviour creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 14: engagement_behaviour
+## Completed Table 14(c): engagement_behaviour
 
 
-## Table 15: user_txn_attributes
+## Table 15 (a): dining_preferences
+v_query="SELECT customerid
+        , a.orderid AS orderid
+        , dealid
+        , dessert
+        , brunch
+        , buffet
+        , breakfast
+        , lunch
+        , dinner
+FROM (SELECT orderid,
+        dealid,
+        CASE WHEN upper(offertitle) like ('%DESSERT%') or UPPER(offertitle) like ('%SWEET%') THEN 1 ELSE 0 END AS dessert,
+        CASE WHEN UPPER(offertitle) like ('%BRUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS brunch,
+        CASE WHEN UPPER(offertitle) like ('%BUFFET%') THEN 1 ELSE 0 END AS buffet,
+        CASE WHEN UPPER(offertitle) like ('%BREAKFAST%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS breakfast,
+        CASE WHEN UPPER(offertitle) like ('%LUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS lunch,
+        CASE WHEN UPPER(offertitle) like ('%DINNER%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS dinner
+      FROM Atom.order_line
+      WHERE ispaid='t'
+        AND finalprice>0
+      GROUP BY orderid, dealid, dessert, brunch, buffet, breakfast, lunch, dinner
+      ) as a
+LEFT JOIN(SELECT  orderid,
+                  customerid as customerid
+          FROM Atom.order_header
+          WHERE ispaid='t'
+            AND totalprice>0
+         ) as b
+    ON (a.orderid=b.orderid)";
+
+v_destination_tbl="${v_dataset_name}.dining_preferences";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating dining_preferences: $v_task_status";
+
+
+v_subtask="User Attributes Step 15 (a): dining_preferences creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 15 (a): dining_preferences
+
+## Table 15 (b): user_txn_attributes
 
 
 v_query="Select x.customerid as customerid,
@@ -1219,351 +1520,64 @@ v_query="Select x.customerid as customerid,
         p.favbrunchdeal as favbrunchdeal,
         x.desserts as desserts,
         r.favdessertdeal as favdessertdeal,
-        x.nonVeg_veg as nonVeg_Veg,
-        q.favnonVeg_vegdeal as favnonVeg_vegdeal,
-        x.alcoholic as alcoholic,
-        s.favalcoholicdeal as favalcoholicdeal,
-        x.unlimitedDeals as unlimitedDeals,
-        u.favunlimiteddeal as favunlimiteddeal,
-        x.withkids as withkids,
-        t.favwithkidsdeal as favwithkidsdeal,
         breakfast,
         lunch,
-        dinner,
-        italianCuisine,
-        southIndianCuisine
-from (SELECT
-      customerid as customerid,
-      if(sum(buffet)>0,'Eats Buffet','No Buffet orders') as buffet,
-      if(sum(breakfast)>0,'Breakfast','No Breakfast') as breakfast,
-      if(sum(lunch)>0,'Lunch','No Lunch') as lunch,
-      if(sum(dinner)>0,'Dinner','No Dinner') as dinner,
-      if(sum(brunch)>0,'Brunch','No Brunch') as brunch,
-      if(sum(nonveg)>0,'Non-Veg',if(sum(veg)>0   AND sum(nonveg)=0,'Veg','Can\'t Say')) as nonVeg_Veg,
-      if(sum(alcoholic)>0,'Drinks Alcohol',if(sum(alcoholic)=0   AND sum(nonAlcoholicDrinks)>0,'Only Non-alcoholic drinks','No Drinks')) as alcoholic,
-      if(sum(unlimited)>0,'Unlimited deals','No Unlimited deals') as unlimitedDeals,
-      if(sum(italianCuisine)>0,'Orders Italian','No Italian Dish') as italianCuisine,
-      if(sum(southIndianCuisine)>0,'Orders South Indian dish','No South Indian Dish') as southIndianCuisine,
-      if(sum(dessert)>0,'Orders Dessert','No Dessert') as desserts,
-      if(sum(withKids)>0,'Went with kids','Can\'t Say') as withKids
-      FROM (SELECT 
-              orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN UPPER(offertitle) like ('%BUFFET%') THEN 1 ELSE 0 END AS buffet,
-              CASE WHEN UPPER(offertitle) like ('%BREAKFAST%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS breakfast,
-              CASE WHEN UPPER(offertitle) like ('%LUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS lunch,
-              CASE WHEN UPPER(offertitle) like ('%DINNER%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS dinner,
-              CASE WHEN UPPER(offertitle) like ('%BRUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS brunch,
-              CASE WHEN UPPER(offertitle) like ('%NON-VEG%') or UPPER(offertitle) like ('%NON VEG%') or UPPER(offertitle) like ('%CHICKEN%') THEN 1 ELSE 0 END AS nonVeg,
-              CASE WHEN UPPER(offertitle) like ('%VEG%') THEN 1 ELSE 0 END AS veg,
-              CASE WHEN upper(offertitle) like ('%COCKTAIL%') or UPPER(offertitle) like ('%BEER%') or UPPER(offertitle) like ('%PITCHER%') or UPPER(offertitle) like ('%WINE%') or UPPER(offertitle) like ('%WHISKEY%') or UPPER(offertitle) like ('%IMFL%') or UPPER(offertitle) like ('%PITCHER%') or UPPER(offertitle) like ('%PINT%') or UPPER(offertitle) like ('%TEQUILA%') or UPPER(offertitle) like ('%DOMESTIC DRINKS%')  THEN 1 ELSE 0 END AS alcoholic,
-              CASE WHEN upper(offertitle) like ('%MOCKTAIL%') or UPPER(offertitle) like ('%SOFT DRINKS%') or UPPER(offertitle) like ('%SOFTDRINKS%') THEN 1 ELSE 0 END AS nonAlcoholicDrinks,
-              CASE WHEN upper(offertitle) like ('%UNLIMITED%') THEN 1 ELSE 0 END AS unlimited,
-              CASE WHEN upper(offertitle) like ('%PIZZA%') or upper(offertitle) like ('%PASTA%') THEN 1 ELSE 0 END AS italianCuisine,
-              CASE WHEN upper(offertitle) like ('%DOSA%') or UPPER(offertitle) like ('%IDLI%') or UPPER(offertitle) like ('%SAMBHAR%') THEN 1 ELSE 0 END AS southIndianCuisine,
-              CASE WHEN upper(offertitle) like ('%DESSERT%') or UPPER(offertitle) like ('%SWEET%') THEN 1 ELSE 0 END AS dessert,
-              CASE WHEN upper(offertitle) like ('%CHILD%') or UPPER(offertitle) like ('%KID%') THEN 1 ELSE 0 END AS withKids,
-            FROM Atom.order_line
-            WHERE ispaid='t'
-              AND finalprice>0
-            ) as a
-
-      LEFT JOIN(
-      SELECT
-        orderid,
-        customerid as customerid
-      FROM
-        Atom.order_header
-      WHERE ispaid='t'
-        AND totalprice>0) as b
-      ON
-        (a.orderid=b.orderid)
-      WHERE length(customerid)>5
-      GROUP BY 1
-      ) as x
-  
-Left Join (
-SELECT
-  customerid,
-  buffet,
-  NTH(1,dealid) as favbuffetdeal
-FROM (SELECT 
-        customerid,
-        CASE WHEN buffet=1 THEN 'Eats Buffet' END AS buffet,
-        dealid,
-        COUNT(dealid) as txncount
-      FROM (SELECT 
-              orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN UPPER(offertitle) like ('%BUFFET%') THEN 1 ELSE 0 END AS buffet,
-            FROM Atom.order_line
-            WHERE ispaid='t'
-              AND finalprice>0
-            ) as a
-
-      LEFT JOIN  (SELECT orderid,
-                         customerid as customerid
-                FROM Atom.order_header
-                WHERE ispaid='t'
-                  AND totalprice>0
-                  ) as b
-      ON (a.orderid=b.orderid)
-      GROUP BY 1, 3, buffet
-      ORDER BY 4 desc
-      )
-GROUP BY 1,2
-) as z
-on (x.customerid=z.customerid
-    AND  x.buffet=z.buffet)
-  
-Left Join (
-SELECT
-  customerid,
-  brunch,
-  NTH(1,dealid) as favbrunchdeal
-FROM
-(SELECT 
-  customerid,
-  CASE WHEN brunch=1 then 'Brunch'
-       end as brunch,
-  dealid,
-  COUNT(dealid) as txncount
-FROM (SELECT  orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN UPPER(offertitle) like ('%BRUNCH%')   AND categoryid='FNB' THEN 1 ELSE 0 END AS brunch,
-    FROM Atom.order_line
-    WHERE ispaid='t'
-      AND finalprice>0
-    ) as a
-
-LEFT JOIN (SELECT orderid,
-                  customerid as customerid
-          FROM Atom.order_header
-          WHERE ispaid='t'
-            AND totalprice>0
-          ) as b
-ON (a.orderid=b.orderid)
-GROUP BY 1, 3, brunch
-ORDER BY 4 desc
-)
-GROUP BY 1,2
-) as p
-on
-  (x.customerid=p.customerid
-    AND  x.brunch=p.brunch)
-Left Join (SELECT
-              customerid,
-              nonVeg_Veg,
-              NTH(1,dealid) as favnonVeg_Vegdeal
-            FROM
-            (SELECT 
-              customerid,
-              CASE WHEN nonVeg=1 then 'Non-Veg'
-                   when nonVeg=0   AND Veg=1 then 'Veg' 
-                   /*when nonVeg=0   AND veg=0 then 'Can\'t Say'*/ end as nonVeg_Veg,
-              dealid,
-              COUNT(dealid) as txncount
-            FROM (SELECT  orderlineid,
-                          orderid,
-                          dealid,
-                          offerid,
-                          voucherid,
-                          offertitle,
-                          CASE WHEN UPPER(offertitle) like ('%NON-VEG%') or UPPER(offertitle) like ('%NON VEG%') or UPPER(offertitle) like ('%CHICKEN%') 
-                                  THEN 1 
-                                  ELSE 0 END AS nonVeg,
-                          CASE WHEN UPPER(offertitle) like ('%VEG%') THEN 1 ELSE 0 END AS veg,
-                  FROM Atom.order_line
-                  WHERE ispaid='t'
-                    AND finalprice>0
-                  ) as a
-
-            LEFT JOIN(SELECT  orderid,
-                              customerid as customerid
-                      FROM Atom.order_header
-                      WHERE ispaid='t'
-                        AND totalprice>0) as b
-                      ON (a.orderid=b.orderid)
-                      GROUP BY 1,3,nonVeg,veg,nonVeg_veg
-                      ORDER BY 4 desc
-              )
-            GROUP BY 1,2
-          ) as q
-on
-  (x.customerid=q.customerid
-    AND  x.nonVeg_Veg=q.nonVeg_Veg)
-
-Left Join (
-SELECT
-  customerid,
-  dessert,
-  NTH(1,dealid) as favdessertdeal
-FROM (SELECT 
-        customerid,
-        CASE WHEN dessert=1 then 'Orders Dessert'
-             /*when dessert=0 then 'No Dessert'*/ end as dessert,
-        dealid,
-        COUNT(dealid) as txncount
-      FROM (SELECT 
-              orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN upper(offertitle) like ('%DESSERT%') or UPPER(offertitle) like ('%SWEET%') THEN 1 ELSE 0 END AS dessert,
-            FROM Atom.order_line
-            WHERE ispaid='t'
-              AND finalprice>0
-            ) as a
-
-      LEFT JOIN(SELECT  orderid,
-                        customerid as customerid
-                FROM Atom.order_header
-                WHERE ispaid='t'
-                  AND totalprice>0
-               ) as b
-      ON (a.orderid=b.orderid)
-      GROUP BY 1,3,dessert
-      ORDER BY 4 desc
-      )
-GROUP BY 1,2
-) as r
-on
-  (x.customerid=r.customerid
-    AND  x.desserts=r.dessert)
-
-Left Join (
-SELECT customerid,
-        alcoholic,
-        NTH(1,dealid) as favalcoholicdeal
-FROM (SELECT 
-        customerid,
-        CASE WHEN alcoholic=1 then 'Drinks Alcohol'
-             when alcoholic=0   AND nonalcoholicdrinks=1 then 'Only Non-alcoholic drinks'
-             /*when alcoholic=0   AND nonalcoholicdrinks=0 then 'No Drinks'*/ end as alcoholic,
-        dealid,
-        COUNT(dealid) as txncount
-      FROM (SELECT 
-              orderlineid,
-              orderid,
-              dealid,
-              offerid,
-              voucherid,
-              offertitle,
-              CASE WHEN upper(offertitle) like ('%COCKTAIL%') or UPPER(offertitle) like ('%BEER%') or UPPER(offertitle) like ('%PITCHER%') or UPPER(offertitle) like ('%WINE%') THEN 1 ELSE 0 END AS alcoholic,
-              CASE WHEN upper(offertitle) like ('%MOCKTAIL%') or UPPER(offertitle) like ('%SOFT DRINKS%') or UPPER(offertitle) like ('%SOFTDRINKS%') THEN 1 ELSE 0 END AS nonAlcoholicDrinks,
-            FROM Atom.order_line
-            WHERE ispaid='t'
-              AND finalprice>0
-            ) as a
-
-      LEFT JOIN (SELECT orderid,
-                        customerid as customerid
-                FROM Atom.order_header
-                WHERE ispaid='t'
-                  AND totalprice>0
-                ) as b
-      ON (a.orderid=b.orderid)
-      GROUP BY 1,3,alcoholic
-      ORDER BY 4 desc
-      )
-GROUP BY 1,2
-) as s
-on
-  (x.customerid=s.customerid
-    AND  x.alcoholic=s.alcoholic)
-
-Left Join (
-SELECT
-  customerid,
-  withKids,
-  NTH(1,dealid) as favwithKidsdeal
-FROM
-    (SELECT customerid,
-            CASE WHEN withKids=1 then 'Went with kids' END AS withKids,
-            dealid,
-            COUNT(dealid) as txncount
-    FROM (SELECT 
-            orderlineid,
-            orderid,
-            dealid,
-            offerid,
-            voucherid,
-            offertitle,
-            CASE WHEN upper(offertitle) like ('%CHILD%') or UPPER(offertitle) like ('%KID%') THEN 1 ELSE 0 END AS withKids,
-          FROM Atom.order_line
-          WHERE ispaid='t'
-            AND finalprice>0
-          ) as a
-
-    LEFT JOIN (SELECT
-                  orderid,
-                  customerid as customerid
-                FROM
-                  Atom.order_header
-                WHERE ispaid='t'
-                  AND totalprice>0) as b
-    ON  (a.orderid=b.orderid)
-    GROUP BY 1,3,withKids
-    ORDER BY 4 desc
-    )
-GROUP BY 1,2
-) as t
-on
-  (x.customerid=t.customerid
-    AND  x.withKids=t.withKids)
-
-Left Join (SELECT customerid,
-                    unlimited,
-                    NTH(1,dealid) as favunlimiteddeal
+        dinner
+FROM (SELECT  customerid as customerid,
+              if(sum(buffet)>0, 1, 0) as buffet,
+              if(sum(breakfast)>0,  1, 0) as breakfast,
+              if(sum(lunch)>0, 1, 0) as lunch,
+              if(sum(dinner)>0,  1, 0) as dinner,
+              if(sum(brunch)>0, 1, 0) as brunch,
+              if(sum(dessert)>0, 1, 0) as desserts
+      FROM ${v_dataset_name}.dining_preferences
+      GROUP BY customerid
+      ) x
+LEFT JOIN (SELECT customerid,
+                  buffet,
+                  NTH(1,dealid) as favbuffetdeal
             FROM (SELECT  customerid,
-                          CASE WHEN unlimited=1 then 'Unlimited deals'
-                               /*when unlimited=0 then 'No Unlimited deals'*/ end as unlimited,
+                          buffet,
                           dealid,
-                          COUNT(dealid) as txncount
-                  FROM
-                  (SELECT   orderlineid,
-                            orderid,
-                            dealid,
-                            offerid,
-                            voucherid,
-                            offertitle,
-                            CASE WHEN upper(offertitle) like ('%UNLIMITED%') THEN 1 ELSE 0 END AS unlimited,
-                  FROM Atom.order_line
-                  WHERE ispaid='t'
-                    AND finalprice>0
-                  ) as a
-
-                  LEFT JOIN(SELECT
-                              orderid,
-                              customerid as customerid
-                            FROM
-                              Atom.order_header
-                            WHERE ispaid='t'
-                              AND totalprice>0) as b
-                            ON
-                              (a.orderid=b.orderid)
-                            GROUP BY 1,3,unlimited
-                            ORDER BY 4 desc
-                          )
+                          EXACT_COUNT_DISTINCT(orderid) as txncount
+                  FROM ${v_dataset_name}.dining_preferences  
+                  WHERE buffet=1
+                  GROUP BY customerid, dealid, buffet
+                  ORDER BY txncount desc
+                  ) buf
             GROUP BY 1,2
-) as u
-on
-  (x.customerid=u.customerid
-  AND  x.unlimitedDeals=u.unlimited)";
+            ) as z
+    ON (x.customerid=z.customerid)
+LEFT JOIN (SELECT customerid,
+                  brunch,
+                  NTH(1,dealid) as favbrunchdeal
+            FROM (SELECT  customerid,
+                          brunch,
+                          dealid,
+                          EXACT_COUNT_DISTINCT(orderid) as txncount
+                        FROM ${v_dataset_name}.dining_preferences  
+                        WHERE brunch=1
+                        GROUP BY customerid, dealid, brunch
+                        ORDER BY txncount desc
+                        ) brn
+            GROUP BY 1,2
+            ) as p
+ON (x.customerid=p.customerid)
+LEFT JOIN (SELECT customerid,
+                  dessert,
+                  NTH(1,dealid) as favdessertdeal
+            FROM (SELECT  customerid,
+                          dessert,
+                          dealid,
+                          EXACT_COUNT_DISTINCT(orderid) as txncount
+                  FROM ${v_dataset_name}.dining_preferences  
+                  WHERE dessert=1
+                  GROUP BY customerid, dealid, dessert
+                  ORDER BY txncount desc
+                  ) des
+            GROUP BY 1,2
+            ) as r
+ON (x.customerid=r.customerid)";
 
 v_destination_tbl="${v_dataset_name}.user_txn_attributes";
 
@@ -1585,10 +1599,10 @@ fi
 echo `date` "Creating user_txn_attributes: $v_task_status";
 
 
-v_subtask="User Attributes Step 15: user_txn_attributes creation";
+v_subtask="User Attributes Step 15 (b): user_txn_attributes creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 15: user_txn_attributes
+## Completed Table 15 (b): user_txn_attributes
 
 
 
@@ -1600,33 +1614,24 @@ v_query="select
   a.dob_day as dob_day,
   a.dob_month as dob_month,
   a.dob_year as dob_year,
-  a.firstPurchaseDate as firstPurchaseDate,
-  a.lastPurchaseDate as lastPurchaseDate,
-  a.totalTxn as totalTxn,
-  a.distinctOffersBought as distinctOffersBought,
-  a.voucherperTxn as voucherperTxn,
-  a.totalVouchers as totalVouchers,
-  a.txnFrequency as txnFrequency,
+  a.raffleFirstPurchaseDate AS raffleFirstPurchaseDate,
+  a.nonRaffleFirstPurchaseDate AS nonRaffleFirstPurchaseDate,
+  a.raffleLastPurchaseDate AS raffleLastPurchaseDate,
+  a.nonRaffleLastPurchaseDate AS nonRaffleLastPurchaseDate,
+  a.totalNonRaffleTxn AS totalNonRaffleTxn, 
+  a.totalRaffleTxn AS totalRaffleTxn, 
+  a.totalNonRaffleVouchers AS totalNonRaffleVouchers, 
+  a.totalRaffleVouchers AS totalRaffleVouchers,
   a.percDiscountAffinty as percDiscountAffinty,
-  b.buffet as buffet,
+  b.buffet as isBuffet,
   b.favbuffetdeal as favbuffetdeal,
-  b.brunch as brunch,
+  b.brunch as isBrunch,
   b.favbrunchdeal as favbrunchdeal,
-  b.desserts as desserts,
+  b.desserts as isDesserts,
   b.favdessertdeal as favdessertdeal,
-  b.nonVeg_Veg as nonVeg_Veg,
-  b.favnonVeg_vegdeal as favnonVeg_vegdeal,
-  b.alcoholic as alcoholic,
-  b.favalcoholicdeal as favalcoholicdeal,
-  b.unlimitedDeals as unlimitedDeals,
-  b.favunlimiteddeal as favunlimiteddeal,
-  b.withkids as withkids,
-  b.favwithkidsdeal as favwithkidsdeal,
-  b.breakfast as breakfast,
-  b.lunch as lunch,
-  b.dinner as dinner,
-  b.italianCuisine as italianCuisine,
-  b.southIndianCuisine as southIndianCuisine,
+  b.breakfast as isBreakfast,
+  b.lunch as isLunch,
+  b.dinner as isDinner,
   c.totalGB as totalGB,
   c.GR as totalGR,
   c.cashback AS cashback,
@@ -1634,12 +1639,8 @@ v_query="select
   c.GR_afterCB as GR_afterFirstCB,
   d.weekendPurchase as weekendPurchase,
   d.weekdayPurchase as weekdayPurchase,
-  d.weekendPurchase_weekendRedeem as weekendPurchase_weekendRedeem,
-  d.weekendPurchase_weekdayRedeem as weekendPurchase_weekdayRedeem,
-  d.weekdayPurchase_weekendRedeem as weekdayPurchase_weekendRedeem,
-  d.weekdayPurchase_weekdayRedeem as weekdayPurchase_weekdayRedeem,
   d.unredeemedVouchers as unredeemedVouchers,
-  d.redeemtimediff_mintues as redeemtimediff_mintues,
+  d.redeemtimediff_hours as redeemtimediff_hours,
   e.cancellations AS cancellations,
   e.redeemed as redeemed,
   e.refunds as refunds,
@@ -1647,18 +1648,18 @@ v_query="select
   k.validForOneTx as validForOneTx,
   k.validForTwoTx as validForTwoTx,
   k.validForMultipleTx as validForMultipleTx,
-  f.latestDealTxn as latestTxnDeal,
+  f.latestMerchantTxn as latestTxnMerchant,
   f.latestCatTxn as latestTxnCategory,
   f.latestTxnPricePoint AS latestTxnPricePoint,
-  f.secLatestDealTxn as secLatestTxnDeal,
+  f.secLatestMerchantTxn as secLatestTxnMerchant,
   f.secLatestCatTxn as seclatestTxnCategory,
   f.secLatestTxnPricePoint as secLatestTxnPricePoint,
-  f.thirdLatestDealTxn as thirdLatestTxnDeal,
+  f.thirdLatestMerchantTxn as thirdLatestTxnMerchant,
   f.thirdLatestCatTxn as thirdLatestTxnCategory,
   f.thirdLatestTxnPricePoint AS thirdLatestTxnPricePoint,
-  g.MostTxnDeal AS MostTxnDeal,
-  g.secondMostTxnDeal AS secondMostTxnDeal,
-  g.thirdMostTxnDeal AS thirdMostTxnDeal,
+  g.MostTxnMerchant AS MostTxnMerchant,
+  g.secondMostTxnMerchant AS secondMostTxnMerchant,
+  g.thirdMostTxnMerchant AS thirdMostTxnMerchant,
   h.mostTxnCat AS mostTxnCat,
   h.mostTxnCatPricePoint AS mostTxnCatPricePoint,
   h.secMostTxnCat AS secMostTxnCat,
@@ -1668,22 +1669,23 @@ v_query="select
   i.latestRedeemCity AS latestRedeemCity,
   i.secondLatRedeemCity AS secondLatRedeemCity,
   i.thirdLatRedeemCity AS thirdLatRedeemCity,
-  (j.PN_scheduled+ j.PN_delivered+ j.PN_opened+ j.PN_failed) as PN_scheduled,
-  (j.PN_delivered+ j.PN_opened) as PN_delivered,
-  j.PN_opened as PN_opened,
+  j.latest_communication_date_PN AS latest_communication_date_PN,
+  (j.PN_delivered+ j.PN_opened + j.PN_dismissed) as PN_delivered,
+  j.PN_opened AS PN_opened, 
+  j.PN_dismissed AS j.PN_dismissed,
   j.PN_failed as PN_failed,
-  ( j.sms_scheduled+ j.sms_delivered+ j.sms_clicked+ j.sms_failed ) as sms_scheduled,
-  (j.sms_delivered+ j.sms_clicked) as sms_delivered,
-  j.sms_clicked as sms_clicked,
-  j.sms_failed as sms_failed,
-  (j.inApp_scheduled+ j.inApp_delivered+ j.inApp_opened + j.inApp_failed ) as inApp_scheduled,
-  (j.inApp_delivered+ j.inApp_opened) as inApp_delivered,
-  j.inApp_opened AS inApp_opened,
-  j.inApp_failed AS inApp_failed,
+  j.PN_complaint AS PN_complaint,
+  (j.PN_delivered_t_minus_15 + j.PN_opened_t_minus_15 + j.PN_dismissed_t_minus_15) as PN_delivered_t_minus_15,
+  j.PN_opened_t_minus_15 AS PN_opened_t_minus_15,
+  j.PN_dismissed_t_minus_15 AS PN_dismissed_t_minus_15,
+  j.PN_failed_t_minus_15 as PN_failed_t_minus_15,
+  j.PN_complaint_t_minus_15 AS PN_complaint_t_minus_15,
   ( j.email_eventSent + j.email_open+ j.email_click ) as email_sent,
   (j.email_open+ j.email_click) as email_open,
   j.email_click AS email_click,
-  j.email_unsubscribe AS email_unsubscribe,
+  ( j.email_eventSent_t_minus_15 + j.email_open_t_minus_15 + j.email_click_t_minus_15 ) as email_sent_t_minus_15,
+  (j.email_open_t_minus_15 + j.email_click_t_minus_15) as email_open_t_minus_15,
+  j.email_click_t_minus_15 AS email_click_t_minus_15,
   
   l.mostVisitedPlace AS mostVisitedPlace,
   l.mostVisitedPlaceCity AS mostVisitedPlaceCity,
@@ -1866,7 +1868,7 @@ v_subtask="Final Table  'user_attributes_merchant_name' ";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
 
-## Completed Table 17
+## Completed Table 17: user_attributes_merchant_name
 
 v_task_end_time=`date`;
 

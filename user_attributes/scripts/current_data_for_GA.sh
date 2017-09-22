@@ -613,7 +613,7 @@ p_exit_upon_error(){
 v_dataset_name="engg_reporting";
 
 
-# Group C 
+# Group C Effective Base
 
 v_query="SELECT  dim.Customer_ID AS Customer_ID
         , dim.first_session_date AS first_session_date
@@ -641,6 +641,40 @@ LEFT JOIN [engg_reporting.user_attributes_merchant_name] merc
     ON c.dealID = merc.Deal_ID
 WHERE DATE(c.date) BETWEEN DATE(dim.effective_since_session_date) AND DATE( dim.latest_session_date)
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14";
+
+
+v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_C_effective_base";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating GA effective data for Table Group C 'user_attributes_ga_group_C_effective_base' : $v_task_status";
+
+
+v_subtask="GA effective data for Table Group C 'user_attributes_ga_group_C_effective_base' ";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+
+# Group C
+v_query="SELECT Customer_ID, first_session_date, effective_since_session_date
+       , latest_session_date, sessionid, visitStartTime
+       , Platform, date, action_type, dealID, Category, city, channelGrouping
+       , COALESCE(ch.Chain_Merchant_ID, ch.Merchant_ID) AS Merchant_ID, Merchant_Name
+FROM ${v_dataset_name}.user_attributes_ga_group_C_effective_base base
+LEFT JOIN [${v_dataset_name}.merchant_with_chain_id] ch
+    ON base.dealID = ch.Deal_ID";
 
 
 v_destination_tbl="${v_dataset_name}.user_attributes_ga_group_C_effective";
