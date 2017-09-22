@@ -1177,11 +1177,11 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Table 14 (a): engagement_PN_dim
 
 v_query="SELECT customerid
-       , latest_communication_date
-       , CAST(DATE(DATE_ADD(latest_communication_date, -15, 'DAY')) AS DATE) AS t_minus_15
-       , CAST(DATE(DATE_ADD(latest_communication_date, -2, 'MONTH')) AS DATE) AS t_minus_60
+       , latest_communication_date_PN
+       , CAST(DATE(DATE_ADD(latest_communication_date_PN, -15, 'DAY')) AS DATE) AS t_minus_15
+       , CAST(DATE(DATE_ADD(latest_communication_date_PN, -2, 'MONTH')) AS DATE) AS t_minus_60
 FROM (SELECT  userid as customerid
-        , CAST(DATE( MSEC_TO_TIMESTAMP(MAX( createdAt) + 19800000)) AS DATE) AS latest_communication_date
+        , CAST(DATE( MSEC_TO_TIMESTAMP(MAX( createdAt) + 19800000)) AS DATE) AS latest_communication_date_PN
 FROM [big-query-1233:Atom.message] 
 WHERE communicationMedium=2
   AND lifecyclestatus IN (40, 50, 60)
@@ -1217,9 +1217,9 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Table 14 (b): engagement_PN_active_base
 
 v_query="SELECT dim.customerid AS customerid
-                  , dim.latest_communication_date AS latest_communication_date
-                  , CAST(DATE(dim.t_minus_15) AS DATE) AS latest_communication_date_minus_15_days
-                  , CAST(DATE(dim.t_minus_60) AS DATE) AS latest_communication_date_minus_60_days
+                  , dim.latest_communication_date_PN AS latest_communication_date_PN
+                  , CAST(DATE(dim.t_minus_15) AS DATE) AS latest_communication_date_PN_minus_15_days
+                  , CAST(DATE(dim.t_minus_60) AS DATE) AS latest_communication_date_PN_minus_60_days
                   , COUNT(CASE WHEN lifecyclestatus=10 THEN 1 ELSE NULL END ) as PN_scheduled
                   , COUNT(CASE WHEN lifecyclestatus=40 THEN 1 ELSE NULL END ) as PN_delivered
                   , COUNT(CASE WHEN lifecyclestatus=50 THEN 1 ELSE NULL END ) as PN_dismissed
@@ -1240,7 +1240,7 @@ v_query="SELECT dim.customerid AS customerid
             ON dim.customerid = msg.userid
           WHERE communicationMedium = 2
             AND DATE(MSEC_TO_TIMESTAMP( createdAt + 19800000 )) >= DATE(dim.t_minus_60)
-          GROUP BY customerid, latest_communication_date, latest_communication_date_minus_15_days, latest_communication_date_minus_60_days";
+          GROUP BY customerid, latest_communication_date_PN, latest_communication_date_PN_minus_15_days, latest_communication_date_PN_minus_60_days";
 
 v_destination_tbl="${v_dataset_name}.engagement_PN_active_base";
 
@@ -1273,6 +1273,7 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 v_query="SELECT
   a.customerid as customerid,
+  b.latest_communication_date_PN AS latest_communication_date_PN,
   b.PN_scheduled AS PN_scheduled,
   b.PN_delivered AS PN_delivered,
   b.PN_dismissed AS PN_dismissed,
@@ -1289,7 +1290,10 @@ v_query="SELECT
   b.PN_bounced_t_minus_15 AS  PN_bounced_t_minus_15,
   c.email_open as email_open,
   c.email_click as email_click,
-  c.email_eventSent AS email_eventSent
+  c.email_eventSent AS email_eventSent,
+  c.email_open_t_minus_15 as email_open_t_minus_15,
+  c.email_click_t_minus_15 as email_click_t_minus_15,
+  c.email_eventSent_t_minus_15 AS email_eventSent_t_minus_15,
 FROM (SELECT  customerId,
               name,
               gender,
@@ -1297,17 +1301,24 @@ FROM (SELECT  customerId,
     FROM [big-query-1233:Atom.customer]
     WHERE isValidated=true
     ) as a
-
 LEFT JOIN ${v_dataset_name}.engagement_PN_active_base b
     ON a.customerid = b.customerid
 LEFT JOIN (SELECT uid
               , COUNT(CASE WHEN Event_Type_ID=10 THEN 1 END) AS email_open
               , COUNT(CASE WHEN Event_Type_ID=2 THEN 1 END) AS email_eventSent
               , COUNT(CASE WHEN Event_Type_ID=20 THEN 1 END) AS email_click
-            FROM (TABLE_DATE_RANGE([big-query-1233:cheetah.cheetah_], TIMESTAMP(DATE_ADD(TIMESTAMP(CURRENT_DATE()),-365,'DAY')), TIMESTAMP(CURRENT_DATE())))
+            FROM (TABLE_DATE_RANGE([big-query-1233:cheetah.cheetah_], TIMESTAMP(DATE_ADD(TIMESTAMP(CURRENT_DATE()), -61,'DAY')), TIMESTAMP(CURRENT_DATE())))
             GROUP BY 1
             ) as c
-on a.primaryemailaddress=c.uid";
+on a.primaryemailaddress=c.uid
+LEFT JOIN (SELECT uid
+              , COUNT(CASE WHEN Event_Type_ID=10 THEN 1 END) AS email_open_t_minus_15
+              , COUNT(CASE WHEN Event_Type_ID=2 THEN 1 END) AS email_eventSent_t_minus_15
+              , COUNT(CASE WHEN Event_Type_ID=20 THEN 1 END) AS email_click_t_minus_15
+            FROM (TABLE_DATE_RANGE([big-query-1233:cheetah.cheetah_], TIMESTAMP(DATE_ADD(TIMESTAMP(CURRENT_DATE()), -16,'DAY')), TIMESTAMP(CURRENT_DATE())))
+            GROUP BY 1
+            ) as d
+on a.primaryemailaddress=d.uid";
 
 v_destination_tbl="${v_dataset_name}.engagement_behaviour";
 
@@ -1550,6 +1561,7 @@ v_query="select
   i.latestRedeemCity AS latestRedeemCity,
   i.secondLatRedeemCity AS secondLatRedeemCity,
   i.thirdLatRedeemCity AS thirdLatRedeemCity,
+  j.latest_communication_date_PN AS latest_communication_date_PN,
   (j.PN_delivered+ j.PN_opened + j.PN_dismissed) as PN_delivered,
   j.PN_opened AS PN_opened, 
   j.PN_dismissed AS j.PN_dismissed,
@@ -1562,6 +1574,9 @@ v_query="select
   j.PN_complaint_t_minus_15 AS PN_complaint_t_minus_15,
   ( j.email_eventSent + j.email_open+ j.email_click ) as email_sent,
   (j.email_open+ j.email_click) as email_open,
+  j.email_click AS email_click,
+  ( j.email_eventSent_t_minus_15 + j.email_open_t_minus_15 + j.email_click_t_minus_15 ) as email_eventSent_t_minus_15,
+  (j.email_open_t_minus_15 + j.email_click_t_minus_15) as email_open_t_minus_15,
   j.email_click AS email_click,
   
   l.mostVisitedPlace AS mostVisitedPlace,

@@ -933,6 +933,7 @@ non_ga.customerid AS customerid
 , non_ga.latestRedeemCity AS latestRedeemCity
 , non_ga.secondLatRedeemCity AS secondLatRedeemCity
 , non_ga.thirdLatRedeemCity AS thirdLatRedeemCity
+, non_ga.latest_communication_date_PN AS latest_communication_date_PN
 , non_ga.PN_delivered AS PN_delivered
 , non_ga.PN_opened AS PN_opened
 , non_ga.PN_dismissed AS PN_dismissed
@@ -947,6 +948,9 @@ non_ga.customerid AS customerid
 , non_ga.email_sent AS email_sent
 , non_ga.email_open AS email_open
 , non_ga.email_click AS email_click
+, non_ga.email_sent_t_minus_15 AS email_sent_t_minus_15
+, non_ga.email_open_t_minus_15 AS email_open_t_minus_15
+, non_ga.email_click_t_minus_15 AS email_click_t_minus_15
 
 , non_ga.mostVisitedPlace AS mostVisitedPlace
 , non_ga.mostVisitedPlaceCity AS mostVisitedPlaceCity
