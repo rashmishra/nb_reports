@@ -100,14 +100,8 @@ v_query="SELECT
     when Sum(case when source='Web' then 1 else 0 end)/count(source) >=0.7 then 'Web'
     when count(source) is null or count(source)=0 then null
     else 'Cross-Platfrom' end as platformAffinity,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (0,1,2) then 1 else 0 end) as AM_0_3,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (3,4,5) then 1 else 0 end) as AM_3_6,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (6,7,8) then 1 else 0 end) as AM_6_9,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (9,10,11) then 1 else 0 end) as AM_9_12,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (12,13,14) then 1 else 0 end) as PM_12_3,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (15,16,17) then 1 else 0 end) as PM_3_6,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (18,19,20) then 1 else 0 end) as PM_6_9,
-  sum(case when hour(sec_to_timestamp( session_start_time )) in (21,22,23) then 1 else 0 end) as PM_9_12,
+  sum(case when hour(sec_to_timestamp( session_start_time )) BETWEEN 5 AND 17 then 1 else 0 end) as AM_6_PM_6,
+  sum(case when hour(sec_to_timestamp( session_start_time )) NOT BETWEEN 5 AND 17 then 1 else 0 end) as PM_6_AM_6,
 FROM [big-query-1233:engg_reporting.user_attributes_ga_session_history]
 group by 1";
 
@@ -732,14 +726,8 @@ v_query="select
   a.activeDays as activeDays,
   a.sessionsPerActiveDay as sessionsPerActiveDay,
   a.platformAffinity as platformAffinity,
-  a.AM_0_3 as AM_0_3,
-  a.AM_3_6 as AM_3_6,
-  a.AM_6_9 as AM_6_9,
-  a.AM_9_12 as AM_9_12,
-  a.PM_12_3 as PM_12_3,
-  a.PM_3_6 as PM_3_6,
-  a.PM_6_9 as PM_6_9,
-  a.PM_9_12 as PM_9_12,
+  a.AM_6_PM_6 as AM_6_PM_6,
+  a.PM_6_AM_6 as PM_6_AM_6,
   b.twoG as twoG,
   b.threeG as threeG,
   b.fourG as fourG,
@@ -947,7 +935,15 @@ non_ga.customerid AS customerid
 , non_ga.thirdLatRedeemCity AS thirdLatRedeemCity
 , non_ga.PN_delivered AS PN_delivered
 , non_ga.PN_opened AS PN_opened
+, non_ga.PN_dismissed AS PN_dismissed
 , non_ga.PN_failed AS PN_failed
+, non_ga.PN_complaint AS PN_complaint
+, non_ga.PN_delivered_t_minus_15 AS PN_delivered_t_minus_15
+, non_ga.PN_opened_t_minus_15 AS PN_opened_t_minus_15
+, non_ga.PN_dismissed_t_minus_15 AS PN_dismissed_t_minus_15
+, non_ga.PN_failed_t_minus_15 AS PN_failed_t_minus_15
+, non_ga.PN_complaint_t_minus_15 AS PN_complaint_t_minus_15
+, non_ga.PN_bounced AS PN_bounced
 , non_ga.email_sent AS email_sent
 , non_ga.email_open AS email_open
 , non_ga.email_click AS email_click
@@ -987,14 +983,8 @@ ga.latestSessionDate as latestSessionDate,
 ga.activeDays as activeDays,
 ga.sessionsPerActiveDay as sessionsPerActiveDay,
 ga.platformAffinity as platformAffinity,
-ga.AM_0_3 as AM_0_3,
-ga.AM_3_6 as AM_3_6,
-ga.AM_6_9 as AM_6_9,
-ga.AM_9_12 as AM_9_12,
-ga.PM_12_3 as PM_12_3,
-ga.PM_3_6 as PM_3_6,
-ga.PM_6_9 as PM_6_9,
-ga.PM_9_12 as PM_9_12
+ga.AM_6_PM_6 as AM_6_PM_6,
+ga.PM_6_AM_6 as PM_6_AM_6,
 ga.twoG as twoG,
 ga.threeG as threeG,
 ga.fourG as fourG,

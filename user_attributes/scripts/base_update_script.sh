@@ -1001,10 +1001,100 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Completed Table 13 (a): mall_market_street_info
 
 
+## Table 13 (b): mms_visits
+
+v_query="SELECT customerid
+                   , hotspot
+                   , hotspotCity
+                   , COUNT(hotspotEntered) AS visits
+            FROM (SELECT ul.customerId as customerid
+                         , mms.name as hotspot
+                         , mms.city as hotspotCity
+                         , DATE(MSEC_TO_TIMESTAMP(ul.time + 19800000)) AS date_entered
+                         , hotspotEntered
+                    FROM cerebro.user_location as ul
+                    INNER JOIN Atom.mall_market_street as mms on ul.hotspotEntered = mms._id
+                    WHERE ul.hotspotEntered is not null AND ul.distanceFromHotspot < 25
+                    GROUP BY 1, 2, 3, 4, 5
+            )
+            GROUP BY 1, 2, 3";
 
 
-## Table 13 (b): most_visited
+v_destination_tbl="${v_dataset_name}.mms_visits";
 
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating mms_visits: $v_task_status";
+
+
+v_subtask="User Attributes Step 13 (b): mms_visits creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 13 (b): mms_visits
+
+
+
+## Table 13 (c): mms_most_visits
+
+v_query="SELECT   customerid , 
+                NTH(1, hotspot) AS mostVisitedPlace,
+                NTH(1, hotspotCity) AS mostVisitedPlaceCity,
+                NTH(1, visits) AS times1,
+                NTH(2, hotspot) AS secMostVisitedPlace,
+                NTH(2, hotspotCity) AS secMostVisitedPlaceCity,
+                NTH(2, visits) AS times2,
+                NTH(3, hotspot) AS thirdMostVisitedPlace,
+                NTH(3, hotspotCity) AS thirdMostVisitedPlaceCity,
+                NTH(3, visits) AS times3
+      FROM (SELECT customerid
+                   , hotspot
+                   , hotspotCity
+                   , visits
+            FROM ${v_dataset_name}.mms_visits
+            ORDER BY visits DESC
+            )
+      GROUP BY 1";
+
+
+v_destination_tbl="${v_dataset_name}.mms_most_visits";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating mms_most_visits: $v_task_status";
+
+
+v_subtask="User Attributes Step 13 (c): mms_most_visits creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 13 (c): mms_most_visits
+
+## Table 13 (d): most_visited
 
 v_query="SELECT  customerid AS int_customerid , 
         CAST(customerid AS STRING) AS customerid,
@@ -1026,35 +1116,7 @@ v_query="SELECT  customerid AS int_customerid ,
         m3.polygonId AS polygonId3,
         m3.total as totalMerchants3,
         m3.selling as sellingMerchants3,
-FROM (SELECT   customerid , 
-                NTH(1, hotspot) AS mostVisitedPlace,
-                NTH(1, hotspotCity) AS mostVisitedPlaceCity,
-                NTH(1, visits) AS times1,
-                NTH(2, hotspot) AS secMostVisitedPlace,
-                NTH(2, hotspotCity) AS secMostVisitedPlaceCity,
-                NTH(2, visits) AS times2,
-                NTH(3, hotspot) AS thirdMostVisitedPlace,
-                NTH(3, hotspotCity) AS thirdMostVisitedPlaceCity,
-                NTH(3, visits) AS times3
-      FROM (SELECT customerid
-                   , hotspot
-                   , hotspotCity
-                   , COUNT(hotspotEntered) AS visits
-            FROM (SELECT ul.customerId as customerid
-                         , mms.name as hotspot
-                         , mms.city as hotspotCity
-                         , DATE(MSEC_TO_TIMESTAMP(ul.time + 19800000)) AS date_entered
-                         , hotspotEntered
-                    FROM cerebro.user_location as ul
-                    INNER JOIN Atom.mall_market_street as mms on ul.hotspotEntered = mms._id
-                    WHERE ul.hotspotEntered is not null AND ul.distanceFromHotspot < 25
-                    GROUP BY 1, 2, 3, 4, 5
-            )
-            GROUP BY 1, 2, 3
-      ORDER BY visits DESC
-            )
-      GROUP BY 1
-) as x
+FROM [${v_dataset_name}.mms_most_visits] as x
 LEFT JOIN [engg_reporting.mall_market_street_info] as m1
 on (x.mostVisitedPlace=m1.mallName
   AND x.mostVisitedPlaceCity=m1.cityName)
@@ -1105,24 +1167,129 @@ fi
 echo `date` "Creating most_visited: $v_task_status";
 
 
-v_subtask="User Attributes Step 13: most_visited creation";
+v_subtask="User Attributes Step 13 (d): most_visited creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 13 (b): most_visited
+## Completed Table 13 (d): most_visited
 
 
 
-## Table 14: engagement_behaviour
+## Table 14 (a): engagement_PN_dim
+
+v_query="SELECT customerid
+       , latest_communication_date
+       , CAST(DATE(DATE_ADD(latest_communication_date, -15, 'DAY')) AS DATE) AS t_minus_15
+       , CAST(DATE(DATE_ADD(latest_communication_date, -2, 'MONTH')) AS DATE) AS t_minus_60
+FROM (SELECT  userid as customerid
+        , CAST(DATE( MSEC_TO_TIMESTAMP(MAX( createdAt) + 19800000)) AS DATE) AS latest_communication_date
+FROM [big-query-1233:Atom.message] 
+WHERE communicationMedium=2
+  AND lifecyclestatus IN (40, 50, 60)
+GROUP BY 1
+)";
+
+v_destination_tbl="${v_dataset_name}.engagement_PN_dim";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating engagement_PN_dim: $v_task_status";
+
+
+v_subtask="User Attributes Step 14 (a): engagement_PN_dim creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 14 (a): engagement_PN_dim
+
+
+## Table 14 (b): engagement_PN_active_base
+
+v_query="SELECT dim.customerid AS customerid
+                  , dim.latest_communication_date AS latest_communication_date
+                  , CAST(DATE(dim.t_minus_15) AS DATE) AS latest_communication_date_minus_15_days
+                  , CAST(DATE(dim.t_minus_60) AS DATE) AS latest_communication_date_minus_60_days
+                  , COUNT(CASE WHEN lifecyclestatus=10 THEN 1 ELSE NULL END ) as PN_scheduled
+                  , COUNT(CASE WHEN lifecyclestatus=40 THEN 1 ELSE NULL END ) as PN_delivered
+                  , COUNT(CASE WHEN lifecyclestatus=50 THEN 1 ELSE NULL END ) as PN_dismissed
+                  , COUNT(CASE WHEN lifecyclestatus=60 THEN 1 ELSE NULL END ) as PN_opened
+                  , COUNT(CASE WHEN lifecyclestatus=80 THEN 1 ELSE NULL END ) as PN_failed
+                  , COUNT(CASE WHEN lifecyclestatus=90 THEN 1 ELSE NULL END ) as PN_complaint
+                  , COUNT(CASE WHEN lifecyclestatus=100 THEN 1 ELSE NULL END ) as PN_bounced
+                  
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=10 then 1 ELSE 0 end ) as PN_scheduled_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=40 then 1 ELSE 0 end ) as PN_delivered_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=50 then 1 ELSE 0 end ) as PN_dismissed_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=60 then 1 ELSE 0 end ) as PN_opened_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=80 then 1 ELSE 0 end ) as PN_failed_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=90 then 1 ELSE 0 end ) as PN_complaint_t_minus_15
+                  , SUM(CASE WHEN DATE(MSEC_TO_TIMESTAMP( msg.createdAt + 19800000 )) >= DATE(dim.t_minus_15) AND lifecyclestatus=100 then 1 ELSE 0 end ) as PN_bounced_t_minus_15
+          FROM [big-query-1233:${v_dataset_name}.engagement_PN_dim] dim
+          INNER JOIN [big-query-1233:Atom.message] msg
+            ON dim.customerid = msg.userid
+          WHERE communicationMedium = 2
+            AND DATE(MSEC_TO_TIMESTAMP( createdAt + 19800000 )) >= DATE(dim.t_minus_60)
+          GROUP BY customerid, latest_communication_date, latest_communication_date_minus_15_days, latest_communication_date_minus_60_days";
+
+v_destination_tbl="${v_dataset_name}.engagement_PN_active_base";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}" &
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating engagement_PN_active_base: $v_task_status";
+
+
+v_subtask="User Attributes Step 14 (b): engagement_PN_active_base creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 14 (b): engagement_PN_active_base
+
+
+## Table 14 (c): engagement_behaviour
 
 
 v_query="SELECT
   a.customerid as customerid,
-  b.PN_scheduled as PN_scheduled,
-  b.PN_delivered as PN_delivered,
-  b.PN_opened as PN_opened,
-  b.PN_failed as PN_failed,
+  b.PN_scheduled AS PN_scheduled,
+  b.PN_delivered AS PN_delivered,
+  b.PN_dismissed AS PN_dismissed,
+  b.PN_opened AS PN_opened,
+  b.PN_failed AS PN_failed,
+  b.PN_complaint AS PN_complaint,
+  b.PN_bounced AS  PN_bounced,
+  b.PN_scheduled_t_minus_15 AS PN_scheduled_t_minus_15,
+  b.PN_delivered_t_minus_15 AS PN_delivered_t_minus_15,
+  b.PN_dismissed_t_minus_15 AS PN_dismissed_t_minus_15,
+  b.PN_opened_t_minus_15 AS PN_opened_t_minus_15,
+  b.PN_failed_t_minus_15 AS PN_failed_t_minus_15,
+  b.PN_complaint_t_minus_15 AS PN_complaint_t_minus_15,
+  b.PN_bounced_t_minus_15 AS  PN_bounced_t_minus_15,
   c.email_open as email_open,
   c.email_click as email_click,
+  c.email_eventSent AS email_eventSent
 FROM (SELECT  customerId,
               name,
               gender,
@@ -1131,19 +1298,12 @@ FROM (SELECT  customerId,
     WHERE isValidated=true
     ) as a
 
-LEFT JOIN (SELECT  userid as customerid,
-                  COUNT(case when lifecyclestatus=10 and communicationMedium=2 then 1 end ) as PN_scheduled,
-                  COUNT(case when lifecyclestatus=40 and communicationMedium=2 then 1 end ) as PN_delivered,
-                  COUNT(case when lifecyclestatus=60 and communicationMedium=2 then 1 end ) as PN_opened,
-                  COUNT(case when lifecyclestatus=80 and communicationMedium=2 then 1 end ) as PN_failed
-          FROM [big-query-1233:Atom.message] 
-          group by 1
-          ) as b
-ON a.customerid = b.customerid
-left join (SELECT
-              uid,
-              count(case when Event_Type_ID=10 then 1 end) as email_open,
-              count(case when Event_Type_ID=20 then 1 end) as email_click,
+LEFT JOIN ${v_dataset_name}.engagement_PN_active_base b
+    ON a.customerid = b.customerid
+LEFT JOIN (SELECT uid
+              , COUNT(CASE WHEN Event_Type_ID=10 THEN 1 END) AS email_open
+              , COUNT(CASE WHEN Event_Type_ID=2 THEN 1 END) AS email_eventSent
+              , COUNT(CASE WHEN Event_Type_ID=20 THEN 1 END) AS email_click
             FROM (TABLE_DATE_RANGE([big-query-1233:cheetah.cheetah_], TIMESTAMP(DATE_ADD(TIMESTAMP(CURRENT_DATE()),-365,'DAY')), TIMESTAMP(CURRENT_DATE())))
             GROUP BY 1
             ) as c
@@ -1169,10 +1329,10 @@ fi
 echo `date` "Creating engagement_behaviour: $v_task_status";
 
 
-v_subtask="User Attributes Step 14: engagement_behaviour creation";
+v_subtask="User Attributes Step 14 (c): engagement_behaviour creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 14: engagement_behaviour
+## Completed Table 14(c): engagement_behaviour
 
 
 ## Table 15 (a): dining_preferences
@@ -1223,10 +1383,10 @@ else
     v_task_status="failed";
 fi
 
-echo `date` "Creating user_txn_attributes: $v_task_status";
+echo `date` "Creating dining_preferences: $v_task_status";
 
 
-v_subtask="User Attributes Step 15: user_txn_attributes creation";
+v_subtask="User Attributes Step 15 (a): dining_preferences creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ## Completed Table 15 (a): dining_preferences
@@ -1320,7 +1480,7 @@ fi
 echo `date` "Creating user_txn_attributes: $v_task_status";
 
 
-v_subtask="User Attributes Step 15: user_txn_attributes creation";
+v_subtask="User Attributes Step 15 (b): user_txn_attributes creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
 ## Completed Table 15 (b): user_txn_attributes
@@ -1390,9 +1550,16 @@ v_query="select
   i.latestRedeemCity AS latestRedeemCity,
   i.secondLatRedeemCity AS secondLatRedeemCity,
   i.thirdLatRedeemCity AS thirdLatRedeemCity,
-  (j.PN_delivered+ j.PN_opened) as PN_delivered,
-  j.PN_opened as PN_opened,
+  (j.PN_delivered+ j.PN_opened + j.PN_dismissed) as PN_delivered,
+  j.PN_opened AS PN_opened, 
+  j.PN_dismissed AS j.PN_dismissed,
   j.PN_failed as PN_failed,
+  j.PN_complaint AS PN_complaint,
+  (j.PN_delivered_t_minus_15 + j.PN_opened_t_minus_15 + j.PN_dismissed_t_minus_15) as PN_delivered_t_minus_15,
+  j.PN_opened_t_minus_15 AS PN_opened_t_minus_15,
+  j.PN_dismissed_t_minus_15 AS PN_dismissed_t_minus_15,
+  j.PN_failed_t_minus_15 as PN_failed_t_minus_15,
+  j.PN_complaint_t_minus_15 AS PN_complaint_t_minus_15,
   ( j.email_eventSent + j.email_open+ j.email_click ) as email_sent,
   (j.email_open+ j.email_click) as email_open,
   j.email_click AS email_click,
@@ -1578,7 +1745,7 @@ v_subtask="Final Table  'user_attributes_merchant_name' ";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
 
-## Completed Table 17
+## Completed Table 17: user_attributes_merchant_name
 
 v_task_end_time=`date`;
 
