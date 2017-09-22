@@ -47,22 +47,50 @@ v_dataset_name="engg_reporting";
 
 
 
-## Table 1: latest_three_txn
+## Table 0: merchant_with_chain_id
+# Chain Merchant IDs for a Merchant at Deal level
+
+
+v_query="SELECT id AS Deal_ID, mappings.chain.id AS Chain_Merchant_ID
+       , mappings.merchant.id AS Merchant_ID
+FROM FLATTEN([Atom.mapping] , mappings.chain.id)
+WHERE type = 'deal'
+GROUP BY Chain_Merchant_ID, Merchant_ID, Deal_ID";
+
+
+v_destination_tbl="${v_dataset_name}.merchant_with_chain_id";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating merchant_with_chain_id: $v_task_status";
+
+
+v_subtask="User Attributes Step 0: merchant_with_chain_id creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 0: merchant_with_chain_id
+
+
+
+## Table 1 (a): price_point_base
                                     # Category (Transaction)
                                     # Primary SKU (Transaction)
                                     # Price point (Transaction)
 
-v_query="SELECT  customerId,
-        NTH(1,dealId) AS latestDealTxn,
-        NTH(1,categoryId) AS latestCatTxn,
-        NTH(1,pricePoint) AS latestTxnPricePoint,
-        NTH(2,dealId) AS secLatestDealTxn,
-        NTH(2,categoryId) AS secLatestCatTxn,
-        NTH(2,pricePoint) AS secLatestTxnPricePoint,
-        NTH(3,dealId) AS thirdLatestDealTxn,
-        NTH(3,categoryId) AS thirdLatestCatTxn,
-        NTH(3,pricePoint) AS thirdLatestTxnPricePoint
-FROM (SELECT  a.customerId AS customerId,
+v_query="SELECT  a.customerId AS customerId,
               b.dealId AS dealId,
               b.categoryId as categoryId,
               txn_time,
@@ -86,8 +114,54 @@ FROM (SELECT  a.customerId AS customerId,
       ON  a.orderid = b.orderid
       WHERE b.dealid<> '14324'
       AND b.dealid NOT IN (select STRING(deal_id) from dbdev.dtr_deals_live)
-      GROUP BY 1,2,3,4
-      ORDER BY 4 DESC
+      GROUP BY 1,2,3,4";
+
+v_destination_tbl="${v_dataset_name}.price_point_base";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating price_point_base: $v_task_status";
+
+
+v_subtask="User Attributes Step 1 (a): price_point_base creation";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 1 (a): price_point_base
+
+## Table 1 (b): latest_three_txn
+                                    # Category (Transaction)
+                                    # Primary SKU (Transaction)
+                                    # Price point (Transaction)
+
+v_query="SELECT  customerId,
+        NTH(1,Effective_Merchant_ID) AS latestMerchantTxn,
+        NTH(1,categoryId) AS latestCatTxn,
+        NTH(1,pricePoint) AS latestTxnPricePoint,
+        NTH(2,Effective_Merchant_ID) AS secLatestMerchantTxn,
+        NTH(2,categoryId) AS secLatestCatTxn,
+        NTH(2,pricePoint) AS secLatestTxnPricePoint,
+        NTH(3,Effective_Merchant_ID) AS thirdLatestMerchantTxn,
+        NTH(3,categoryId) AS thirdLatestCatTxn,
+        NTH(3,pricePoint) AS thirdLatestTxnPricePoint
+FROM (SELECT  customerId, dealId, categoryId, txn_time, pricePoint
+        , COALESCE( Chain_Merchant_ID, Merchant_ID) AS Effective_Merchant_ID
+      FROM ${v_dataset_name}.price_point_base pp
+      LEFT JOIN [engg_reporting.merchant_with_chain_id] ch
+          ON pp.dealId = ch.Deal_ID
+      ORDER BY txn_time DESC
 )
 GROUP BY customerId";
 
@@ -111,10 +185,10 @@ fi
 echo `date` "Creating latest_three_txn: $v_task_status";
 
 
-v_subtask="User Attributes Step 1: latest_three_txn creation";
+v_subtask="User Attributes Step 1 (b): latest_three_txn creation";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 1: latest_three_txn
+## Completed Table 1 (b): latest_three_txn
 
 ## Table 2: most_txn_category
 
@@ -1540,13 +1614,13 @@ v_query="select
   k.validForOneTx as validForOneTx,
   k.validForTwoTx as validForTwoTx,
   k.validForMultipleTx as validForMultipleTx,
-  f.latestDealTxn as latestTxnDeal,
+  f.latestMerchantTxn as latestTxnMerchant,
   f.latestCatTxn as latestTxnCategory,
   f.latestTxnPricePoint AS latestTxnPricePoint,
-  f.secLatestDealTxn as secLatestTxnDeal,
+  f.secLatestMerchantTxn as secLatestTxnMerchant,
   f.secLatestCatTxn as seclatestTxnCategory,
   f.secLatestTxnPricePoint as secLatestTxnPricePoint,
-  f.thirdLatestDealTxn as thirdLatestTxnDeal,
+  f.thirdLatestMerchantTxn as thirdLatestTxnMerchant,
   f.thirdLatestCatTxn as thirdLatestTxnCategory,
   f.thirdLatestTxnPricePoint AS thirdLatestTxnPricePoint,
   g.MostTxnDeal AS MostTxnDeal,

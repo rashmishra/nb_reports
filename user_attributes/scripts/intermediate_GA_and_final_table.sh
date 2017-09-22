@@ -954,13 +954,13 @@ non_ga.customerid AS customerid
 , non_ga.validForOneTx AS validForOneTx
 , non_ga.validForTwoTx AS validForTwoTx
 , non_ga.validForMultipleTx AS validForMultipleTx
-, non_ga.latestTxnDeal AS latestTxnDeal
+, non_ga.LatestTxnMerchant AS LatestTxnMerchant
 , non_ga.latestTxnCategory AS latestTxnCategory
 , non_ga.latestTxnPricePoint AS latestTxnPricePoint
-, non_ga.secLatestTxnDeal AS secLatestTxnDeal
+, non_ga.secLatestTxnMerchant AS secLatestTxnMerchant
 , non_ga.seclatestTxnCategory AS seclatestTxnCategory
 , non_ga.secLatestTxnPricePoint AS secLatestTxnPricePoint
-, non_ga.thirdLatestTxnDeal AS thirdLatestTxnDeal
+, non_ga.thirdLatestTxnMerchant AS thirdLatestTxnMerchant
 , non_ga.thirdLatestTxnCategory AS thirdLatestTxnCategory
 , non_ga.thirdLatestTxnPricePoint AS thirdLatestTxnPricePoint
 , non_ga.MostTxnDeal AS MostTxnDeal
