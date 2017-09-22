@@ -410,11 +410,11 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 ## Table 6: user_attributes_top_deals_browsed
 
 v_query="SELECT customerid 
-       , FIRST(IF(ranka = 1, dealID, null)) AS mostBrowsedDeal
-       , FIRST(IF(ranka = 2, dealID, null)) AS secMostBrowsedDeal
-       , FIRST(IF(ranka = 3, dealID, null)) AS thirdMostBrowsedDeal
+       , FIRST(IF(ranka = 1, Merchant_ID, null)) AS mostBrowsedMerchant
+       , FIRST(IF(ranka = 2, Merchant_ID, null)) AS secMostBrowsedMerchant
+       , FIRST(IF(ranka = 3, Merchant_ID, null)) AS thirdMostBrowsedMerchant
 FROM (SELECT  Customer_ID as customerid,
-              dealID,
+              Merchant_ID,
               count(dealid) as dealViews,
               DENSE_RANK() OVER (PARTITION BY customerid ORDER BY dealViews DESC) AS ranka,
       FROM [big-query-1233:engg_reporting.user_attributes_ga_group_C_effective]
@@ -785,9 +785,9 @@ v_query="select
   e.mostSearchKeyword as mostSearchKeyword,
   e.secMostSearchKeyword as secMostSearchKeyword,
   e.thirdMostSearchKeyword as thirdMostSearchKeyword,
-  f.mostBrowsedDeal as mostBrowsedDeal,
-  f.secMostBrowsedDeal as secMostBrowsedDeal,
-  f.thirdMostBrowsedDeal as thirdMostBrowsedDeal,
+  f.mostBrowsedMerchant as mostBrowsedMerchant,
+  f.secMostBrowsedMerchant as secMostBrowsedMerchant,
+  f.thirdMostBrowsedMerchant as thirdMostBrowsedMerchant,
   g.mostBrowsedCat as mostBrowsedCat,
   g.mostBrowsedCatPricepoint as mostBrowsedCatPricepoint,
   g.secMostBrowsedCat as secMostBrowsedCat,
@@ -1049,9 +1049,9 @@ ga.thirdLatestSearchKeyword as thirdLatestSearchKeyword,
 ga.mostSearchKeyword as mostSearchKeyword,
 ga.secMostSearchKeyword as secMostSearchKeyword,
 ga.thirdMostSearchKeyword as thirdMostSearchKeyword,
-ga.mostBrowsedDeal as mostBrowsedDeal,
-ga.secMostBrowsedDeal as secMostBrowsedDeal,
-ga.thirdMostBrowsedDeal as thirdMostBrowsedDeal,
+ga.mostBrowsedMerchant as mostBrowsedMerchant,
+ga.secMostBrowsedMerchant as secMostBrowsedMerchant,
+ga.thirdMostBrowsedMerchant as thirdMostBrowsedMerchant,
 ga.mostBrowsedCat as mostBrowsedCat,
 ga.mostBrowsedCatPricepoint as mostBrowsedCatPricepoint,
 ga.secMostBrowsedCat as secMostBrowsedCat,
