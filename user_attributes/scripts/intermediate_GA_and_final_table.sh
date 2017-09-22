@@ -86,7 +86,7 @@ p_exit_upon_error "$v_task_status" "$v_subtask";
 
 
 
-## Table 1: user_attributes_ga_platform_daytime_affinity
+## Table 1 (a): user_attributes_ga_platform_daytime_affinity
 
 v_query="SELECT 
   Customer_ID,
@@ -129,7 +129,42 @@ echo `date` "Creating GA intermediate Table 'user_attributes_ga_platform_daytime
 v_subtask="GA intermediate Table 'user_attributes_ga_platform_daytime_affinity' ";
 p_exit_upon_error "$v_task_status" "$v_subtask";
 
-## Completed Table 1: user_attributes_ga_platform_daytime_affinity
+## Completed Table 1 (a): user_attributes_ga_platform_daytime_affinity
+
+## Table 1 (b): user_attributes_ga_active_since_days
+
+v_query="SELECT Customer_ID
+       , IF (DATE(latestSessionDate) BETWEEN DATE(DATE_ADD(CURRENT_DATE(), -8, 'DAY')) AND DATE(CURRENT_DATE()), 1, 0 ) AS isActive_last_7_days
+       , IF (DATE(latestSessionDate) BETWEEN DATE(DATE_ADD(CURRENT_DATE(), -1, 'MONTH')) AND DATE(CURRENT_DATE()), 1, 0 ) AS isActive_last_30_days
+       , IF (DATE(latestSessionDate) BETWEEN DATE(DATE_ADD(CURRENT_DATE(), -2, 'MONTH')) AND DATE(CURRENT_DATE()), 1, 0 ) AS isActive_last_60_days
+       , IF (DATE(latestSessionDate) BETWEEN DATE(DATE_ADD(CURRENT_DATE(), -3, 'MONTH')) AND DATE(CURRENT_DATE()), 1, 0 ) AS isActive_last_90_days
+FROM ${v_dataset_name}.user_attributes_ga_platform_daytime_affinity
+"
+
+v_destination_tbl="${v_dataset_name}.user_attributes_ga_active_since_days";
+
+echo -e "bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl \"${v_query}\";"
+
+
+/home/ubuntu/google-cloud-sdk/bin/bq query --maximum_billing_tier 1000 --allow_large_results=1 --replace -n 1 --destination_table=$v_destination_tbl "${v_query}"& 
+v_pid=$!
+
+
+if wait $v_pid; then
+    echo "Process $v_pid Status: success";
+    v_task_status="success";
+else 
+    echo "Process $v_pid Status: failed";
+    v_task_status="failed";
+fi
+
+echo `date` "Creating GA intermediate Table 1 (b) 'user_attributes_ga_active_since_days' : $v_task_status";
+
+
+v_subtask="GA intermediate Table 1(b) 'user_attributes_ga_active_since_days' ";
+p_exit_upon_error "$v_task_status" "$v_subtask";
+
+## Completed Table 1 (b): user_attributes_ga_platform_daytime_affinity
 
 ## Table 2: user_attributes_ga_browser_sessions
 
@@ -728,6 +763,10 @@ v_query="select
   a.platformAffinity as platformAffinity,
   a.AM_6_PM_6 as AM_6_PM_6,
   a.PM_6_AM_6 as PM_6_AM_6,
+  a2.isActive_last_7_days AS isActive_last_7_days, 
+  a2.isActive_last_30_days AS isActive_last_30_days, 
+  a2.isActive_last_60_days AS isActive_last_60_days, 
+  a2.isActive_last_90_days AS isActive_last_90_days,
   b.twoG as twoG,
   b.threeG as threeG,
   b.fourG as fourG,
@@ -783,6 +822,9 @@ v_query="select
   h.SNM_pricepoint_browsed as SNM_pricepoint_browsed
 from
 [engg_reporting.user_attributes_ga_platform_daytime_affinity] a
+
+LEFT JOIN [engg_reporting.user_attributes_ga_active_since_days] a2
+on (a.Customer_ID=a2.Customer_ID)
 
 left join [engg_reporting.user_attributes_ga_browser_sessions] b
 on (a.Customer_ID=b.Customer_ID)
