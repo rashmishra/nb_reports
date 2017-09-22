@@ -1683,7 +1683,7 @@ v_query="select
   ( j.email_eventSent + j.email_open+ j.email_click ) as email_sent,
   (j.email_open+ j.email_click) as email_open,
   j.email_click AS email_click,
-  ( j.email_eventSent_t_minus_15 + j.email_open_t_minus_15 + j.email_click_t_minus_15 ) as email_eventSent_t_minus_15,
+  ( j.email_eventSent_t_minus_15 + j.email_open_t_minus_15 + j.email_click_t_minus_15 ) as email_sent_t_minus_15,
   (j.email_open_t_minus_15 + j.email_click_t_minus_15) as email_open_t_minus_15,
   j.email_click_t_minus_15 AS email_click_t_minus_15,
   
