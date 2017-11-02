@@ -103,7 +103,11 @@ a.orderline_status as orderline_status
   ,b.af_app_version as aquisition_af_app_version
   ,b.af_os_version as aquisition_af_os_version
   ,b.af_is_retargeting as aquisition_af_is_retargeting,
- b.af_is_reengagement as aquisition_af_is_reengagement
+ b.af_is_reengagement as aquisition_af_is_reengagement,
+   b.af_fb_campaign_id as aquisition_af_fb_campaign_id, 
+  b.af_fb_campaign_name as aquisition_af_fb_campaign_name, 
+  b.af_fb_adset_id as aquisition_af_fb_adset_id, 
+  b.Af_fb_Adgroup_Id as aquisition_Af_fb_Adgroup_Id
     
 from
 
@@ -180,7 +184,8 @@ a.orderline_status as orderline_status
   ,ap.af_channel as af_channel
   , ap.af_reaatributed_flag as af_reaatributed_flag
   ,ap.af_is_retargeting as af_is_retargeting,
- ap.af_re_targeting_conversion_type as af_is_reengagement  
+ ap.af_re_targeting_conversion_type as af_is_reengagement,
+
  FROM 
  nb_reports.master_transaction  a
  LEFT JOIN (
@@ -226,7 +231,11 @@ SELECT
   ,ap.af_app_version as af_app_version
   ,ap.af_os_version as af_os_version
   ,ap.af_is_retargeting as af_is_retargeting,
- ap.af_re_targeting_conversion_type as af_is_reengagement  
+ ap.af_re_targeting_conversion_type as af_is_reengagement,
+  ap.af_fb_campaign_id as af_fb_campaign_id, 
+  ap.af_fb_campaign_name as af_fb_campaign_name, 
+  ap.af_fb_adset_id as af_fb_adset_id, 
+  ap.Af_fb_Adgroup_Id as Af_fb_Adgroup_Id
  FROM 
  nb_reports.master_transaction  a
  LEFT JOIN (
@@ -247,7 +256,7 @@ SELECT
   LEFT JOIN  
  (select * from nb_reports.downstream_appsflyer where rank = 1) as ap on a.order_Id = ap.af_order_id 
 where a.first_transaction = 'TRUE'
-Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,24,25,26,27
  ) b on a.customer_id = b.customer_id
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
@@ -355,7 +364,11 @@ a.orderline_status as orderline_status
   ,b.af_app_version as aquisition_af_app_version
   ,b.af_os_version as aquisition_af_os_version
   ,b.af_is_retargeting as aquisition_af_is_retargeting,
- b.af_is_reengagement as aquisition_af_is_reengagement
+ b.af_is_reengagement as aquisition_af_is_reengagement,
+ b.af_fb_campaign_id as aquisition_af_fb_campaign_id, 
+  b.af_fb_campaign_name as aquisition_af_fb_campaign_name, 
+  b.af_fb_adset_id as aquisition_af_fb_adset_id, 
+  b.Af_fb_Adgroup_Id as aquisition_Af_fb_Adgroup_Id
     
 from
 
@@ -479,7 +492,11 @@ SELECT
   ,ap.af_app_version as af_app_version
   ,ap.af_os_version as af_os_version
   ,ap.af_is_retargeting as af_is_retargeting,
- ap.af_re_targeting_conversion_type as af_is_reengagement  
+ ap.af_re_targeting_conversion_type as af_is_reengagement,
+ ap.af_fb_campaign_id as af_fb_campaign_id, 
+  ap.af_fb_campaign_name as af_fb_campaign_name, 
+  ap.af_fb_adset_id as af_fb_adset_id, 
+  ap.Af_fb_Adgroup_Id as Af_fb_Adgroup_Id
  FROM 
  nb_reports.master_transaction  a
  LEFT JOIN (
@@ -500,7 +517,7 @@ SELECT
   LEFT JOIN  
  (select * from nb_reports.reengagement_appsflyer where rank = 1) as ap on a.order_Id = ap.af_order_id 
 where a.first_transaction = 'TRUE'
-Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23--, 24--, 25,26
+Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,26,27
  
  ) b on a.customer_id = b.customer_id
 
