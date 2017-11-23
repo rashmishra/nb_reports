@@ -12,7 +12,7 @@ date
 v_query_master_transactions="SELECT 
  orderid as order_id,
   datestamp as date_time_ist,
-  credits_requested,
+  sum(credits_requested*z.vouchers) as credits_requested ,
   customer_id,
   customer_name,
   x.source as platform_type,
@@ -29,14 +29,14 @@ END AS Promo_flag,
   device_id,
   orderline_id,
   deal_id,
-  INTEGER(final_price) as final_price,
+  INTEGER(z.finalprice) as final_price,
   Round(margin_percentage,2) as margin_percentage,
   merchant_id,
   merchant_name,
   offer_id,
   offer_title,
   orderline_status,
-  INTEGER(unit_price) as unit_price,
+  INTEGER(unit_price*z.vouchers) as unit_price,
   vertical,
   voucher_code,
   redemption_lat,
@@ -86,7 +86,7 @@ END AS Promo_flag,
   Round(SUM(payable_by_PG),2) AS payable_by_pg,
   INTEGER(SUM(TransactionValue)) AS GB,
   Round(SUM(price_After_Promo),2) AS price_after_promo,
-  Round(SUM(x.cashback_amount),2) AS cashback_amount,
+  Round(SUM(z.cashback_amount),2) AS cashback_amount,
   
   FROM
  (
@@ -386,8 +386,14 @@ LEFT join
   promo_discount_percentage, promo_max_cap, promo_cashback_percentage,promo_cashback_amount, promo_offer_price_range_from, promo_is_cashback, source,is_deferential,has_user_transacted
     
     ) y  on x.promocode = y.promocode_id and x.source2 = y.source
+    left join
+    (
     
-    Group by 1, 2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,52,53,54,55,56,57,58,59,60,61,62,63
+    select  sum(cashbackamount )/100 as cashback_amount, sum(finalprice)/100 as finalprice, count(orderlineid) as vouchers, orderlineid   from [Atom.order_line] where ispaid = 't' group by orderlineid  
+    ) z on z.orderlineid = x.orderline_id
+    
+    Group by 1, 2,  --3, 
+    4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,52,53,54,55,56,57,58,59,60,61,62,63
            
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
