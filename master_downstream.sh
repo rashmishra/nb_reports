@@ -1452,7 +1452,7 @@ if wait $v_downstream_pids;
 else v_table_status="Code failed in one or more table loads" ;
 fi
 
-echo "Downstream  and  Reengagement & mapping Tables status:$v_table_status`date`" | mail -s "$v_table_status" rashmi.mishra@nearbuy.com ## sairanganath.v@nearbuy.com rahul.sachan@nearbuy.com
+echo "Downstream  and  - Reengagement & mapping Tables status:$v_table_status`date`" | mail -s "$v_table_status" rashmi.mishra@nearbuy.com ## sairanganath.v@nearbuy.com rahul.sachan@nearbuy.com
 
 
 ##mutt -s "Atom Refresh: All Extracts status:  $v_all_extracts_status`date` "  -- sairanganath.v@nearbuy.com rahul.sachan@nearbuy.com rashmi.mishra@nearbuy.com < /dev/null
