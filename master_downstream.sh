@@ -1054,12 +1054,12 @@ LEFT JOIN (
       order_id,
       EXACT_COUNT_DISTINCT(orderline_id) count_orderline
     FROM
-      [nb_reports.downstream]
+      [nb_reports.master_transaction] 
       --where order_id = 15401289
     GROUP BY
       1 ) AS b
   ON
-    a.Parent_order_id = b.order_id
+    a.Parent_order_id = b.order_id 
   GROUP BY
     1,
     2,
@@ -1094,7 +1094,6 @@ ON
       [big-query-1233:DAS.POP_Dashboard_new_1]
     GROUP BY
       1)) AS  B 
-      
       on a.promocode = b.promocode  
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
