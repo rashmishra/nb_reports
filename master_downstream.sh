@@ -1034,23 +1034,14 @@ LEFT JOIN (
     POP_Eligible,
     POP_Issued,
     count_orderline,
-<<<<<<< HEAD
-    POP_Eligible/count_orderline Avg_POP_Eligible, 
-    POP_Issued/count_orderline Avg_POP_Issued,
-=======
     ROUND(POP_Eligible/count_orderline) Avg_POP_Eligible, 
     ROUND(POP_Issued/count_orderline) Avg_POP_Issued,
->>>>>>> 3d189c20b44a5c9c1ff1e26a900ce6f62bb6bc35
   FROM (
     SELECT
       Parent_order_id,
       parentcode POP_Parent_code,
       CHILDPROMOCODE,
-<<<<<<< HEAD
-      sum(eligible) POP_Eligible,
-=======
       SUM(eligible) POP_Eligible,
->>>>>>> 3d189c20b44a5c9c1ff1e26a900ce6f62bb6bc35
       SUM(pop_issued) POP_Issued
     FROM
       [big-query-1233:DAS.POP_Dashboard_new_1]
@@ -1063,21 +1054,12 @@ LEFT JOIN (
       order_id,
       EXACT_COUNT_DISTINCT(orderline_id) count_orderline
     FROM
-<<<<<<< HEAD
       [nb_reports.master_transaction] 
-=======
-      [nb_reports.downstream]
->>>>>>> 3d189c20b44a5c9c1ff1e26a900ce6f62bb6bc35
       --where order_id = 15401289
     GROUP BY
       1 ) AS b
   ON
-<<<<<<< HEAD
     a.Parent_order_id = b.order_id 
-   
-=======
-    a.Parent_order_id = b.order_id
->>>>>>> 3d189c20b44a5c9c1ff1e26a900ce6f62bb6bc35
   GROUP BY
     1,
     2,
