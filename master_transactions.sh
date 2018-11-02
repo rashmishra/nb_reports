@@ -10,8 +10,9 @@ date
 
 # Master_Transaction table loading. Replace existing
 v_query_master_transactions="SELECT 
- orderid as order_id,
+ x.orderid as order_id,
   datestamp as date_time_ist,
+  paid_at as paid_time_ist,
   sum(credits_requested*z.vouchers) as credits_requested ,
   customer_id,
   customer_name,
@@ -24,11 +25,11 @@ WHEN length(x.promocode) < 9 and length(x.promocode) > 3
 THEN 'Referral'
 ELSE
 'Non-Promo'
-END AS Promo_flag,
+END AS promo_flag,
   order_status,
   device_id,
   orderline_id,
-  deal_id,
+  x.deal_id as deal_id,
   INTEGER(z.finalprice) as final_price,
   Round(margin_percentage,2) as margin_percentage,
   merchant_id,
@@ -49,9 +50,9 @@ END AS Promo_flag,
   business_head ,
   a_business_head,
   category_id,
-  transaction_id,
-  payment_flag,
-  paymentgateway_reference,
+--   transaction_id,
+--   payment_flag,
+--   paymentgateway_reference,
   Round(txn,2) as txn,
   last_purchase_date,
   first_purchase_date,
@@ -63,36 +64,42 @@ END AS Promo_flag,
   new_customer_month,
   first_transaction,
   referralprogramid as referral_program_id,
-  y.promo_length as promo_length, 
-  y.promo_logic as promo_logic,
-  y.promo_name as promo_name, 
-  y.promo_description as promo_description,
-  y.promocode_type as promocode_type, 
-  y.promo_discount_amount as promo_discount_amount, 
-  y.promo_discount_percentage as promo_discount_percentage, 
-  y.promo_max_cap as promo_max_cap, 
-  y.promo_cashback_percentage as promo_cashback_percentage,
-  y.promo_cashback_amount as promo_cashback_amount, 
-  y.promo_offer_price_range_from as promo_offer_price_range_from, 
-  y.promo_is_cashback as promo_is_cashback,
-  y.is_deferential as promo_is_deferential,
-  y.has_user_transacted as promo_has_user_transacted,
+--   y.promo_length as promo_length, 
+   y.promo_logic as promo_logic,
+   y.promo_name as promo_name, 
+   y.promo_description as promo_description,
+   y.promocode_type as promocode_type, 
+--   y.promo_discount_amount as promo_discount_amount, 
+--   y.promo_discount_percentage as promo_discount_percentage, 
+--   y.promo_max_cap as promo_max_cap, 
+--   y.promo_cashback_percentage as promo_cashback_percentage,
+--   y.promo_cashback_amount as promo_cashback_amount, 
+--   y.promo_offer_price_range_from as promo_offer_price_range_from, 
+--   y.promo_is_cashback as promo_is_cashback,
+--   y.is_deferential as promo_is_deferential,
+--   y.has_user_transacted as promo_has_user_transacted,
   first_cashback_date,
+ CASE WHEN c.Deal_City = 'National' THEN 'National' else e.City end as deal_city,
+ CASE WHEN d.Deal_State = 'National' THEN 'National' else e.state end  as deal_state,
   merchantcode as merchant_code,
   paymenttype as paymenttype,
+  e.Primary_Category as primary_category,
     SUM(Number_of_Vouchers) AS number_of_vouchers,
   Round(SUM(GR),2) AS GR,
+ -- Round(SUM(GRx),2) AS GRx,
   Round(SUM(activation_cost),2) AS customer_aquisition_cost,
-  Round(SUM(payable_by_PG),2) AS payable_by_pg,
+  Round((SUM(TransactionValue)-sum(credits_requested*z.vouchers)),2) AS payable_by_pg,
   INTEGER(SUM(TransactionValue)) AS GB,
   Round(SUM(price_After_Promo),2) AS price_after_promo,
   Round(SUM(z.cashback_amount),2) AS cashback_amount,
+  Round(SUM(A.discountbymerchant),2) as discountbymerchant
   
   FROM
  (
   SELECT
     oh.orderid AS orderid,
     oh.created_at AS datestamp,
+    oh.paid_at as paid_at,
     Round((creditsrequested/s.count_oid),2) AS credits_requested,
     oh.customerid AS customer_id,
     oh.customername AS customer_name,
@@ -129,9 +136,9 @@ END AS Promo_flag,
       WHEN ol.orderid > 1991486 THEN ol.categoryid
       ELSE e.category
     END AS category_id,
-    T.transactionId AS transaction_Id,
-    T.paymentFlag AS payment_flag,
-    T.paymentgatewayreference AS paymentGateway_reference,
+--     T.transactionId AS transaction_Id,
+--     T.paymentFlag AS payment_flag,
+--     T.paymentgatewayreference AS paymentGateway_reference,
     1/s.count_oid AS txn,
     p.LPD AS last_purchase_date,
     p.FPD AS first_purchase_date,
@@ -144,19 +151,21 @@ END AS Promo_flag,
     Case when Date(p.FPD)=DATE(oh.created_at)  then 'TRUE' else 'FALSE' end new_customer_day,
     Case when Month(p.fpd)=month(oh.created_at) and Year(p.fpd)=year(oh.Created_at) then 'New' else 'Old' end new_customer_month,
     COUNT (ol.orderid) AS number_of_vouchers,
-    SUM(T.payableAmount/100)/(s.count_oid) AS payable_by_PG,
+   -- SUM(T.payableAmount/100)/(s.count_oid) AS payable_by_PG,
     (SUM(ol.unitprice)) AS TransactionValue,
     (SUM(ol.finalprice)) AS price_after_promo,
-    CASE
+    
+--       case when ol.flatcommission is null then
+--     (case when ol.marginpercentage <0 then 0 else ol.marginpercentage end)*(sum(ol.unitprice)- sum(ifnull(bom.discountbymerchant,0)))
+
+--         ELSE (case when ol.flatcommission <0 then 0 else ol.flatcommission end) *count(ol.orderid)
+--     END AS GR,
+     CASE
       WHEN ol.offerid = w.offer_correct THEN (w.marginGR/100)*(SUM(ol.unitprice))
-      ELSE (
-      CASE
-        WHEN ol.marginPercentage IS NULL THEN ((CASE
-            WHEN ol.flatcommission < 0 THEN 0
-            ELSE ol.flatcommission END))*COUNT (ol.orderid)
-        ELSE ((CASE
-            WHEN ol.marginPercentage < 0 THEN 0
-            ELSE ol.marginPercentage END))*(SUM(ol.unitprice)) END)
+      ELSE (case when ol.flatcommission is null then
+    (case when ol.marginpercentage <0 then 0 else ol.marginpercentage end)*(sum(ol.unitprice)- sum(ifnull(bom.discountbymerchant,0)))
+
+        ELSE (case when ol.flatcommission <0 then 0 else ol.flatcommission end) *count(ol.orderid) END)
     END AS GR,
     cash.first_cashback_date as first_cashback_date,
     ol.merchantcode as merchantcode,
@@ -165,6 +174,7 @@ END AS Promo_flag,
     SELECT
       orderid,
       MSEC_TO_TIMESTAMP(createdat+19800000) AS created_at,
+      MSEC_TO_TIMESTAMP(paidat +19800000) AS paid_at,
       creditsrequested/100.0 AS creditsrequested,
       customerid,
       customername,
@@ -193,7 +203,7 @@ END AS Promo_flag,
       9,
       10,
       11,
-      12,13,14 ) oh
+      12,13,14,15 ) oh
   INNER JOIN (
     SELECT
       orderid,
@@ -255,22 +265,22 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
       bi.buy_price2) AS w
   ON
     ol.offerid = w.offer_correct
-  LEFT OUTER JOIN (
-    SELECT
-      orderid,
-      transactionid ,
-      paymentflag,
-      paymentgatewayreference,
-      payableamount
-    FROM
-      Atom.transaction
-    WHERE
-      transactiontype = 2
-      AND status = 23
-      AND payableAmount > 0
-      AND paymentFlag = 2 ) AS T
-  ON
-    T.orderid = oh.orderid
+--   LEFT OUTER JOIN (
+--     SELECT
+--       orderid,
+--       transactionid ,
+--       paymentflag,
+--       paymentgatewayreference,
+--       payableamount
+--     FROM
+--       Atom.transaction
+--     WHERE
+--       transactiontype = 2
+--       AND status = 23
+--       AND payableAmount > 0
+--       AND paymentFlag = 2 ) AS T
+--   ON
+--     T.orderid = oh.orderid
   LEFT OUTER JOIN
     nb_reports.sales_rep_mapping AS m
   ON
@@ -299,11 +309,22 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
   ON
     lat.latitude= ol.redemptionlat
     AND ol.redemptionlong=lat.longitude
+    
+    left join 
+    (
+ select
+     tbl1.orderid AS orderid,
+     (discountbymerchant)/100  as discountbymerchant
+    FROM [Atom.order_bom]   tbl1
+INNER JOIN [Atom.order_header]  tbl2 ON tbl1.orderid = tbl2.orderid
+group by 1,2
+    ) bom on oh.orderid = bom.orderid
    
      where date(oh.created_at) != current_date()
   GROUP BY
     orderid,
     datestamp,
+    paid_at,
     credits_requested,
     customer_id,
     customer_name,
@@ -338,9 +359,9 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
     ol.categoryid,
     e.category,
     category_id,
-    transaction_Id,
-    payment_Flag,
-    paymentGateway_Reference,
+--     transaction_Id,
+--     payment_Flag,
+--     paymentGateway_Reference,
     s.count_oid,
     txn,
     last_purchase_date,
@@ -365,7 +386,8 @@ where totalcashbackamount is not null and ispaid = 't' group by 1 ) cash on cash
     first_transaction,
     referralprogramid,
     merchantcode,
-    paymenttype
+    paymenttype,
+    bom.discountbymerchant
     ) x
     
 LEFT join
@@ -391,10 +413,66 @@ LEFT join
     
     select  sum(cashbackamount )/100 as cashback_amount, sum(finalprice)/100 as finalprice, count(orderlineid) as vouchers, orderlineid   from [Atom.order_line] where ispaid = 't' group by orderlineid  
     ) z on z.orderlineid = x.orderline_id
+    left join 
+    (
+    select
+     tbl1.orderid AS orderid,
+     sum(discountbymerchant)/100  as discountbymerchant
+    FROM [Atom.order_bom]   tbl1
+INNER JOIN [Atom.order_header]  tbl2 ON tbl1.orderid = tbl2.orderid
+group by 1
+    ) A on A.orderid = x.orderid
+    left join
+(select
+string(deal_id) as deal_id,
+case when count >= 2 then 'National' else 'Single_City' end as Deal_City
+from 
+(
+select 
+_id as deal_id ,
+exact_count_distinct(c.city) as count
+from [Atom.deal] a 
+left join ( select integer(id) as deal_id, mappings.merchant.id as merchant_id
+from [Atom.mapping] where type = 'deal' group by 1,2) b on a._id = b.deal_id
+left join (select string(Merchantid) as merchantid , redemptionAddress.cityTown  as city from [Atom.merchant] 
+where isPublished is true group by 1,2) c on b.merchant_id = c.merchantid
+
+group by 1
+)
+group by 1,2
+)
+ c on x.deal_id = c.deal_id
+left join
+(select
+string(deal_id) as deal_id,
+case when count >= 2 then 'National' else 'Single_state' end as Deal_State
+from 
+(
+select 
+_id as deal_id ,
+exact_count_distinct(c.state) as count
+from [Atom.deal] a  
+left join ( select integer(id) as deal_id, mappings.merchant.id as merchant_id
+from [Atom.mapping] where type = 'deal' group by 1,2) b on a._id = b.deal_id
+left join (select string(Merchantid) as merchantid , redemptionAddress.state   as state from [Atom.merchant] 
+where isPublished is true group by 1,2) c on b.merchant_id = c.merchantid
+
+group by 1
+)
+group by 1,2
+)
+ d on x.deal_id = d.deal_id
+ 
+ left join (select string(Merchantid) as merchantid , redemptionAddress.state   as state, redemptionAddress.cityTown as City,
+ Case when catInfo.isPrimary is true then catInfo.key end as Primary_Category from [Atom.merchant] 
+where isPublished is true  and catInfo.isPrimary is true group by 1,2,3,4) e on x.merchant_id = e.merchantid
+ 
+ 
     
-    Group by 1, 2,  --3, 
-    4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,52,53,54,55,56,57,58,59,60,61,62,63
-           
+    Group by 1, 2,  3, 
+   -- 4, 
+   5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48 , 49, 50 , 51,52,53,54--,55,56,57,58,59,60,61,62,63
+              
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
 
@@ -405,7 +483,6 @@ bq query --maximum_billing_tier 100 --allow_large_results=1 --replace -n 0 --des
 v_first_pid=$!
 v_txn_tbl_pids+=" $v_first_pid"
 wait $v_first_pid;
-
 
 if wait $v_txn_tbl_pids;
       then echo "Successful Execution of code" ;

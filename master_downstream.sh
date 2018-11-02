@@ -240,7 +240,7 @@ case when trafficSource.medium in ('organic') then 'Organic'
     hits.product.productSKU as dealid,
     hits.transaction.transactionId  as orderid
     
-from (TABLE_DATE_RANGE([108795712.ga_sessions_], TIMESTAMP ('2016-04-08'), current_TIMESTAMP ())) 
+from (TABLE_DATE_RANGE([108795712.ga_sessions_], TIMESTAMP ('2017-08-28'), current_TIMESTAMP ())) 
  
 where hits.transaction.transactionId is not null 
 group by --date,
@@ -497,7 +497,7 @@ where rank1 = 1
 )"
 ##echo -e "Query: \n $v_query_Master_Transaction table";
 
-tableName=ga_source_medium
+tableName=ga_source_medium2
 v_destination_tbl="$v_dataset_name.${tableName}";
 echo "bq query --maximum_billing_tier 100 --allow_large_results=1  --replace -n 1 --destination_table=$v_destination_tbl \"$v_query_ga_source_medium\""
 bq query --maximum_billing_tier 10000 --allow_large_results=1 --replace -n 0 --destination_table=$v_destination_tbl "$v_query_ga_source_medium" &
@@ -506,7 +506,7 @@ v_downstream_pids+=" $v_first_pid"
 wait $v_first_pid;
 
 # Downstream table loading. Replace existing
-v_query_downstream="( select order_id,
+v_query_downstream="select order_id,
   orderline_id,
   orderline_status,
   vertical,
@@ -1034,14 +1034,23 @@ LEFT JOIN (
     POP_Eligible,
     POP_Issued,
     count_orderline,
+<<<<<<< HEAD
     POP_Eligible/count_orderline Avg_POP_Eligible, 
     POP_Issued/count_orderline Avg_POP_Issued,
+=======
+    ROUND(POP_Eligible/count_orderline) Avg_POP_Eligible, 
+    ROUND(POP_Issued/count_orderline) Avg_POP_Issued,
+>>>>>>> 3d189c20b44a5c9c1ff1e26a900ce6f62bb6bc35
   FROM (
     SELECT
       Parent_order_id,
       parentcode POP_Parent_code,
       CHILDPROMOCODE,
+<<<<<<< HEAD
       sum(eligible) POP_Eligible,
+=======
+      SUM(eligible) POP_Eligible,
+>>>>>>> 3d189c20b44a5c9c1ff1e26a900ce6f62bb6bc35
       SUM(pop_issued) POP_Issued
     FROM
       [big-query-1233:DAS.POP_Dashboard_new_1]
@@ -1054,13 +1063,21 @@ LEFT JOIN (
       order_id,
       EXACT_COUNT_DISTINCT(orderline_id) count_orderline
     FROM
+<<<<<<< HEAD
       [nb_reports.master_transaction] 
+=======
+      [nb_reports.downstream]
+>>>>>>> 3d189c20b44a5c9c1ff1e26a900ce6f62bb6bc35
       --where order_id = 15401289
     GROUP BY
       1 ) AS b
   ON
+<<<<<<< HEAD
     a.Parent_order_id = b.order_id 
    
+=======
+    a.Parent_order_id = b.order_id
+>>>>>>> 3d189c20b44a5c9c1ff1e26a900ce6f62bb6bc35
   GROUP BY
     1,
     2,
@@ -1095,9 +1112,7 @@ ON
       [big-query-1233:DAS.POP_Dashboard_new_1]
     GROUP BY
       1)) AS  B 
-      
-      on a.promocode = b.promocode   )      
-      
+      on a.promocode = b.promocode  
 "
 ##echo -e "Query: \n $v_query_Master_Transaction table";
 
@@ -1128,7 +1143,7 @@ a.orderline_status as orderline_status
   , a.offer_title AS Offer_title
   , a.merchant_Name AS merchant_name
   , a.merchant_Id AS merchant_id
-  , a.transaction_Id AS transaction_id
+  --, a.transaction_Id AS transaction_id
   , a.Number_of_Vouchers AS number_of_vouchers
   , a.GR AS GR
   , a.deal_owner AS deal_owner
@@ -1139,18 +1154,22 @@ a.orderline_status as orderline_status
   , a.first_purchase_date AS first_purchase_date,
     a.cashback_amount as cashback_amount,
     a.referral_program_id as referral_program_id,
-  a.promo_name as promo_name, 
-  a.promo_description as promo_description, 
-  a.promocode_type as promocode_type,
-  a.promo_discount_amount as promo_discount_amount, 
-  a.promo_discount_percentage as promo_discount_percentage, 
-  a.promo_max_cap as promo_max_cap,
-  a.promo_cashback_percentage as promo_cashback_percentage, 
-  a.promo_cashback_amount as promo_cashback_amount, 
-  a.promo_offer_price_range_from as promo_offer_price_range_from, 
-  a.promo_is_cashback as promo_is_cashback, 
-  a.promo_is_deferential as promo_is_deferential, 
-  a.promo_has_user_transacted as promo_has_user_transacted  
+  --a.promo_length as promo_length, 
+  a.promo_logic as promo_logic 
+  ,a.promo_name as promo_name, 
+   a.promo_description as promo_description, 
+   a.promocode_type as promocode_type,
+   a.promo_flag as promo_flag,
+    a.primary_category as primary_category  
+--   a.promo_discount_amount as promo_discount_amount, 
+--   a.promo_discount_percentage as promo_discount_percentage, 
+--   a.promo_max_cap as promo_max_cap,
+--   a.promo_cashback_percentage as promo_cashback_percentage, 
+--   a.promo_cashback_amount as promo_cashback_amount, 
+--   a.promo_offer_price_range_from as promo_offer_price_range_from, 
+--   a.promo_is_cashback as promo_is_cashback, 
+--   a.promo_is_deferential as promo_is_deferential, 
+--   a.promo_has_user_transacted as promo_has_user_transacted  
   ,a.ga_channel as ga_channel
   ,a.ga_campaign_grouping as ga_campaign_grouping
   ,a.ga_campaign_name as ga_campaign_name
@@ -1182,6 +1201,8 @@ a.orderline_status as orderline_status
   ,a.af_channel as af_channel
   , a.af_reaatributed_flag as af_reaatributed_flag
   ,a.af_is_retargeting as af_is_retargeting,
+   a.paymenttype as paymenttype,
+  a.discountbymerchant as discountbymerchant ,
  a.af_is_reengagement as af_is_reengagement 
   , b.date_time_ist AS aquisition_date_time_ist
   , b.promoCode AS aquisition_promocode
@@ -1229,7 +1250,7 @@ a.orderline_status as orderline_status
   , a.offer_title AS Offer_title
   , a.merchant_Name AS merchant_name
   , a.merchant_Id AS merchant_id
-  , a.transaction_Id AS transaction_id
+  --, a.transaction_Id AS transaction_id
   , a.Number_of_Vouchers AS number_of_vouchers
   , a.GR AS GR
   , a.deal_owner AS deal_owner
@@ -1238,22 +1259,26 @@ a.orderline_status as orderline_status
   , a.new_customer_month as new_customer_month
   , a.last_purchase_date AS last_purchase_date
   , a.first_purchase_date AS first_purchase_date,
-    a.cashback_amount as cashback_amount
-  , a.promo_length as promo_length, 
+    a.cashback_amount as cashback_amount,
+  --, a.promo_length as promo_length, 
   a.promo_logic as promo_logic, 
   a.promo_name as promo_name, 
-  a.promo_description as promo_description, 
-  a.promocode_type as promocode_type,
-  a.promo_discount_amount as promo_discount_amount, 
-  a.promo_discount_percentage as promo_discount_percentage, 
-  a.promo_max_cap as promo_max_cap,
-  a.promo_cashback_percentage as promo_cashback_percentage, 
-  a.promo_cashback_amount as promo_cashback_amount, 
-  a.promo_offer_price_range_from as promo_offer_price_range_from, 
-  a.promo_is_cashback as promo_is_cashback, 
-  a.promo_is_deferential as promo_is_deferential, 
-  a.promo_has_user_transacted as promo_has_user_transacted,
-  a.referral_program_id as referral_program_id
+   a.promo_description as promo_description, 
+   a.promocode_type as promocode_type,
+   a.promo_flag as promo_flag,
+--   a.promo_discount_amount as promo_discount_amount, 
+--   a.promo_discount_percentage as promo_discount_percentage, 
+--   a.promo_max_cap as promo_max_cap,
+--   a.promo_cashback_percentage as promo_cashback_percentage, 
+--   a.promo_cashback_amount as promo_cashback_amount, 
+--   a.promo_offer_price_range_from as promo_offer_price_range_from, 
+--   a.promo_is_cashback as promo_is_cashback, 
+--   a.promo_is_deferential as promo_is_deferential, 
+--   a.promo_has_user_transacted as promo_has_user_transacted,
+   a.referral_program_id as referral_program_id,
+  a.paymenttype as paymenttype,
+  a.discountbymerchant as discountbymerchant ,
+  a.primary_category as primary_category  
   ,y.dcg_ga AS ga_channel
   ,y.campaign_grouping AS ga_campaign_grouping
   ,y.campaign_ga AS ga_campaign_name
@@ -1299,7 +1324,7 @@ SELECT
     ,content AS content_ga
     ,dealid AS dealid_ga
     ,INTEGER (orderid) AS orderid_ga
-  FROM nb_reports.ga_source_medium
+  FROM nb_reports.ga_source_medium2
   where orderid is not null 
   group by dcg_ga, campaign_grouping , campaign_ga , source_ga, medium_ga, keyword_ga, content_ga, dealid_ga,  orderid_ga
   ) AS y ON a.order_Id = y.orderid_ga
@@ -1350,7 +1375,7 @@ SELECT
     ,content AS content_ga
     ,dealid AS dealid_ga
     ,INTEGER (orderid) AS orderid_ga
-  FROM nb_reports.ga_source_medium
+  FROM nb_reports.ga_source_medium2
   where orderid is not null 
   group by dcg_ga, campaign_grouping , campaign_ga , source_ga, medium_ga, keyword_ga, content_ga, dealid_ga,  orderid_ga
   ) AS y ON a.order_Id = y.orderid_ga
@@ -1367,8 +1392,66 @@ tableName=reengagement
 v_destination_tbl="$v_dataset_name.${tableName}";
 echo "bq query --maximum_billing_tier 100 --allow_large_results=1  --replace -n 1 --destination_table=$v_destination_tbl \"$v_query_reengagement\""
 bq query --maximum_billing_tier 100 --allow_large_results=1 --replace -n 0 --destination_table=$v_destination_tbl "$v_query_reengagement" &
-##v_first_pid=$!
+v_first_pid=$!
 v_downstream_pids+=" $!"
+wait $v_first_pid;
+
+
+
+# reengagement loading. Replace existing
+v_query_mapping="select 
+y.BAID as BAID,
+merchantId,
+merchantName,
+string(deal_id) as dealId,
+dealCategory,
+primary_category,
+city,
+state
+ from
+ 
+(
+ select  string(merchantId) as merchantid ,
+ case when catInfo.isPrimary is true then catInfo.key end as primary_category ,
+ redemptionAddress.cityTown  AS CITY,
+     redemptionAddress.state as state,
+     isChain ,
+     name as merchantName,
+     string(businessAccountId) as BAID
+ from [Atom.merchant] where isPublished is true
+ group by 1,2,3,4,5,6,7
+ ) y
+ 
+ left join 
+ (
+select
+_id as deal_id, 
+BAID, 
+merchant_id , 
+ Categoryid AS dealCategory,
+
+from [Atom.deal] a
+left join (select integer(id) as id, mappings.businessAccount.id as BAID, mappings.merchant.id  as merchant_id  , 
+from flatten(flatten([Atom.mapping],mappings.merchant.id),mappings.businessAccount.id)
+where type = 'deal' group by 1,2,3) b on a._id = b.id
+group by 1,2,3,4
+) x
+ 
+ 
+  on x.merchant_id = y.merchantid 
+ group by 1,2,3,4,5,6,7,8
+
+"
+
+tableName=mapping
+v_destination_tbl="$v_dataset_name.${tableName}";
+echo "bq query --maximum_billing_tier 100 --allow_large_results=1  --replace -n 1 --destination_table=$v_destination_tbl \"$v_query_mapping\""
+bq query --maximum_billing_tier 100 --allow_large_results=1 --replace -n 0 --destination_table=$v_destination_tbl "$v_query_mapping" &
+v_first_pid=$!
+v_downstream_pids+=" $!"
+wait $v_first_pid;
+
+
 
 
 if wait $v_downstream_pids;
@@ -1386,7 +1469,7 @@ if wait $v_downstream_pids;
 else v_table_status="Code failed in one or more table loads" ;
 fi
 
-echo "Downstream  and Reengagement  Tables status:$v_table_status`date`" | mail -s "$v_table_status" rashmi.mishra@nearbuy.com ## sairanganath.v@nearbuy.com rahul.sachan@nearbuy.com
+echo "Downstream  and  - Reengagement & mapping Tables status:$v_table_status`date`" | mail -s "$v_table_status" rashmi.mishra@nearbuy.com ## sairanganath.v@nearbuy.com rahul.sachan@nearbuy.com
 
 
 ##mutt -s "Atom Refresh: All Extracts status:  $v_all_extracts_status`date` "  -- sairanganath.v@nearbuy.com rahul.sachan@nearbuy.com rashmi.mishra@nearbuy.com < /dev/null
